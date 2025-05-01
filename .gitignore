@@ -16,3 +16,9 @@
 **/.pdf
 **/wandb                                                                                                                                  
 baselines/ncnc_wl/dataset
+baselines/plots/
+baselines/results_ddi_gnn/
+baselines/results/
+baselines/results_ogb_gnn/
+**/__pycache__
+baselines/dataset/
