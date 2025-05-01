@@ -22,3 +22,8 @@ baselines/results/
 baselines/results_ogb_gnn/
 **/__pycache__
 baselines/dataset/
+
+*.csv
+syn_graph/dataset
+**/wandb/
+syn_real/dataset

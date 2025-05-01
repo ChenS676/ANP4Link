@@ -1,0 +1,183 @@
+data = """
+Metric,Hits@1,MRR,AUC,AP
+Citeseer_GCN_inter0.00_intra0.00_total0_Orbits_658.00_Norm_0.81_ArScore_0.90,26.52 ± 14.78,48.61 ± 13.29,99.65 ± 0.08,99.59 ± 0.11
+Citeseer_GCN_inter0.10_intra0.50_total200_Orbits_1192.00_Norm_0.80_ArScore_0.82,34.79 ± 13.40,48.34 ± 10.77,99.50 ± 0.14,99.41 ± 0.17
+Citeseer_GCN_inter0.10_intra0.50_total1000_Orbits_1849.00_Norm_0.77_ArScore_0.72,31.91 ± 11.93,49.84 ± 4.78,99.42 ± 0.16,99.35 ± 0.14
+Citeseer_GCN_inter0.10_intra0.50_total2000_Orbits_2558.00_Norm_0.73_ArScore_0.62,26.95 ± 13.41,39.74 ± 9.66,98.92 ± 0.24,98.86 ± 0.15
+Citeseer_GCN_inter0.10_intra0.50_total3000_Orbits_3221.00_Norm_0.69_ArScore_0.52,31.82 ± 14.21,43.70 ± 10.66,98.61 ± 0.33,98.61 ± 0.34
+Citeseer_GCN_inter0.10_intra0.50_total4000_Orbits_3776.00_Norm_0.65_ArScore_0.43,4.97 ± 4.24,20.78 ± 3.08,98.03 ± 0.22,97.82 ± 0.29
+Citeseer_GCN_inter0.10_intra0.50_total5000_Orbits_4338.00_Norm_0.61_ArScore_0.35,16.60 ± 10.42,27.99 ± 7.70,97.65 ± 0.47,97.55 ± 0.48
+Citeseer_GCN_inter0.10_intra0.50_total7000_Orbits_5131.00_Norm_0.53_ArScore_0.23,5.12 ± 3.29,13.18 ± 2.00,96.32 ± 0.56,95.86 ± 0.50
+Citeseer_GCN_inter0.10_intra0.50_total8000_Orbits_5398.00_Norm_0.50_ArScore_0.19,13.08 ± 4.90,21.32 ± 4.65,96.49 ± 0.74,96.27 ± 0.92
+Citeseer_GCN_inter0.10_intra0.50_total10000_Orbits_5847.00_Norm_0.42_ArScore_0.12,10.95 ± 5.65,18.08 ± 3.87,95.03 ± 1.60,94.90 ± 1.64
+Citeseer_GCN_inter0.10_intra0.50_total14000_Orbits_6265.00_Norm_0.28_ArScore_0.06,5.61 ± 3.17,10.56 ± 2.93,91.81 ± 2.05,91.28 ± 2.01
+Citeseer_GIN_inter0.00_intra0.00_total0_Orbits_658.00_Norm_0.81_ArScore_0.90,13.16 ± 7.53,20.37 ± 3.99,95.43 ± 1.10,94.73 ± 1.34
+Citeseer_GIN_inter0.10_intra0.50_total200_Orbits_1192.00_Norm_0.80_ArScore_0.82,3.14 ± 3.52,14.17 ± 3.56,95.40 ± 0.71,94.69 ± 0.61
+Citeseer_GIN_inter0.10_intra0.50_total1000_Orbits_1849.00_Norm_0.77_ArScore_0.72,8.35 ± 8.19,18.09 ± 4.48,94.69 ± 1.14,94.08 ± 1.11
+Citeseer_GIN_inter0.10_intra0.50_total2000_Orbits_2558.00_Norm_0.73_ArScore_0.62,1.52 ± 3.50,11.37 ± 2.29,92.73 ± 0.79,92.24 ± 0.50
+Citeseer_GIN_inter0.10_intra0.50_total3000_Orbits_3221.00_Norm_0.69_ArScore_0.52,2.17 ± 1.76,10.79 ± 2.36,90.53 ± 1.34,90.29 ± 1.07
+Citeseer_GIN_inter0.10_intra0.50_total4000_Orbits_3776.00_Norm_0.65_ArScore_0.43,0.82 ± 1.56,10.45 ± 1.82,89.78 ± 1.16,89.30 ± 1.16
+Citeseer_GIN_inter0.10_intra0.50_total5000_Orbits_4338.00_Norm_0.61_ArScore_0.35,13.17 ± 2.80,15.77 ± 2.23,86.46 ± 2.00,86.91 ± 1.72
+Citeseer_GIN_inter0.10_intra0.50_total7000_Orbits_5131.00_Norm_0.53_ArScore_0.23,3.80 ± 3.64,7.51 ± 3.36,78.42 ± 10.10,78.34 ± 10.08
+Citeseer_GIN_inter0.10_intra0.50_total8000_Orbits_5398.00_Norm_0.50_ArScore_0.19,5.84 ± 4.45,9.61 ± 3.08,82.29 ± 1.19,82.59 ± 0.82
+Citeseer_GIN_inter0.10_intra0.50_total10000_Orbits_5847.00_Norm_0.42_ArScore_0.12,2.48 ± 2.45,5.91 ± 2.72,75.34 ± 9.54,75.68 ± 9.45
+Citeseer_GIN_inter0.10_intra0.50_total14000_Orbits_6265.00_Norm_0.28_ArScore_0.06,1.38 ± 1.53,2.82 ± 2.89,61.25 ± 12.04,61.68 ± 12.43
+Citeseer_SAGE_inter0.00_intra0.00_total0_Orbits_658.00_Norm_0.81_ArScore_0.90,8.57 ± 10.35,20.28 ± 12.22,96.19 ± 2.00,96.10 ± 1.76
+Citeseer_SAGE_inter0.10_intra0.50_total200_Orbits_1192.00_Norm_0.80_ArScore_0.82,13.35 ± 17.54,24.01 ± 15.47,95.99 ± 1.77,95.95 ± 2.00
+Citeseer_SAGE_inter0.10_intra0.50_total1000_Orbits_1849.00_Norm_0.77_ArScore_0.72,7.07 ± 4.38,15.82 ± 5.18,94.18 ± 1.73,94.48 ± 1.51
+Citeseer_SAGE_inter0.10_intra0.50_total2000_Orbits_2558.00_Norm_0.73_ArScore_0.62,6.93 ± 5.14,20.13 ± 10.96,93.26 ± 3.49,93.49 ± 3.24
+Citeseer_SAGE_inter0.10_intra0.50_total3000_Orbits_3221.00_Norm_0.69_ArScore_0.52,9.68 ± 6.51,16.45 ± 4.91,91.69 ± 2.63,91.50 ± 3.32
+Citeseer_SAGE_inter0.10_intra0.50_total4000_Orbits_3776.00_Norm_0.65_ArScore_0.43,4.63 ± 4.00,12.57 ± 5.13,91.81 ± 2.91,91.79 ± 2.97
+Citeseer_SAGE_inter0.10_intra0.50_total5000_Orbits_4338.00_Norm_0.61_ArScore_0.35,4.90 ± 2.17,10.34 ± 3.02,86.72 ± 4.49,87.18 ± 4.51
+Citeseer_SAGE_inter0.10_intra0.50_total7000_Orbits_5131.00_Norm_0.53_ArScore_0.23,5.67 ± 4.24,10.56 ± 5.06,85.62 ± 5.20,85.73 ± 5.65
+Citeseer_SAGE_inter0.10_intra0.50_total8000_Orbits_5398.00_Norm_0.50_ArScore_0.19,5.10 ± 3.59,10.61 ± 5.20,82.41 ± 6.02,83.26 ± 5.81
+Citeseer_SAGE_inter0.10_intra0.50_total10000_Orbits_5847.00_Norm_0.42_ArScore_0.12,2.68 ± 1.52,6.89 ± 2.12,77.59 ± 3.97,78.44 ± 4.14
+Citeseer_SAGE_inter0.10_intra0.50_total14000_Orbits_6265.00_Norm_0.28_ArScore_0.06,1.53 ± 1.27,5.16 ± 2.18,74.68 ± 5.96,75.60 ± 5.73
+Citeseer_ChebGCN_inter0.00_intra0.00_total0_Orbits_658.00_Norm_0.81_ArScore_0.90,14.20 ± 11.71,27.07 ± 10.19,97.59 ± 0.46,97.45 ± 0.47
+Citeseer_ChebGCN_inter0.10_intra0.50_total200_Orbits_1192.00_Norm_0.80_ArScore_0.82,14.65 ± 6.99,28.40 ± 6.49,97.76 ± 0.41,97.72 ± 0.32
+Citeseer_ChebGCN_inter0.10_intra0.50_total1000_Orbits_1849.00_Norm_0.77_ArScore_0.72,16.95 ± 6.44,27.45 ± 5.14,97.20 ± 0.44,97.21 ± 0.46
+Citeseer_ChebGCN_inter0.10_intra0.50_total2000_Orbits_2558.00_Norm_0.73_ArScore_0.62,13.97 ± 7.49,23.05 ± 3.27,94.90 ± 0.58,94.88 ± 0.48
+Citeseer_ChebGCN_inter0.10_intra0.50_total3000_Orbits_3221.00_Norm_0.69_ArScore_0.52,11.23 ± 5.26,22.76 ± 4.13,92.50 ± 1.31,92.83 ± 1.09
+Citeseer_ChebGCN_inter0.10_intra0.50_total4000_Orbits_3776.00_Norm_0.65_ArScore_0.43,5.17 ± 4.03,12.33 ± 3.00,88.75 ± 1.86,89.36 ± 1.64
+Citeseer_ChebGCN_inter0.10_intra0.50_total5000_Orbits_4338.00_Norm_0.61_ArScore_0.35,9.22 ± 6.04,15.23 ± 4.23,84.72 ± 1.89,86.03 ± 1.19
+Citeseer_ChebGCN_inter0.10_intra0.50_total7000_Orbits_5131.00_Norm_0.53_ArScore_0.23,4.87 ± 2.62,8.83 ± 2.23,79.21 ± 1.42,80.87 ± 1.26
+Citeseer_ChebGCN_inter0.10_intra0.50_total8000_Orbits_5398.00_Norm_0.50_ArScore_0.19,4.33 ± 3.14,7.57 ± 2.49,76.92 ± 1.49,78.45 ± 1.67
+Citeseer_ChebGCN_inter0.10_intra0.50_total10000_Orbits_5847.00_Norm_0.42_ArScore_0.12,3.75 ± 1.26,7.09 ± 0.94,72.16 ± 2.07,74.41 ± 2.13
+Citeseer_ChebGCN_inter0.10_intra0.50_total14000_Orbits_6265.00_Norm_0.28_ArScore_0.06,2.67 ± 0.81,4.81 ± 0.62,68.81 ± 2.76,70.88 ± 2.37
+Citeseer_GAT_inter0.00_intra0.00_total0_Orbits_658.00_Norm_0.81_ArScore_0.90,14.15 ± 8.08,31.93 ± 8.23,99.42 ± 0.14,99.22 ± 0.24
+Citeseer_GAT_inter0.10_intra0.50_total200_Orbits_1192.00_Norm_0.80_ArScore_0.82,11.14 ± 5.72,21.16 ± 4.89,98.94 ± 0.32,98.60 ± 0.23
+Citeseer_GAT_inter0.10_intra0.50_total1000_Orbits_1849.00_Norm_0.77_ArScore_0.72,6.63 ± 6.38,25.82 ± 4.77,99.17 ± 0.14,98.96 ± 0.13
+Citeseer_GAT_inter0.10_intra0.50_total2000_Orbits_2558.00_Norm_0.73_ArScore_0.62,14.28 ± 6.38,24.61 ± 6.22,98.28 ± 0.71,98.02 ± 0.63
+Citeseer_GAT_inter0.10_intra0.50_total3000_Orbits_3221.00_Norm_0.69_ArScore_0.52,9.68 ± 7.86,19.10 ± 4.48,98.31 ± 0.74,98.01 ± 0.80
+Citeseer_GAT_inter0.10_intra0.50_total4000_Orbits_3776.00_Norm_0.65_ArScore_0.43,13.99 ± 4.96,27.72 ± 7.61,97.89 ± 1.07,97.71 ± 0.92
+Citeseer_GAT_inter0.10_intra0.50_total5000_Orbits_4338.00_Norm_0.61_ArScore_0.35,13.77 ± 7.58,23.06 ± 3.30,97.81 ± 0.41,97.56 ± 0.45
+Citeseer_GAT_inter0.10_intra0.50_total7000_Orbits_5131.00_Norm_0.53_ArScore_0.23,10.80 ± 6.37,21.82 ± 8.21,96.56 ± 1.26,96.35 ± 1.09
+Citeseer_GAT_inter0.10_intra0.50_total8000_Orbits_5398.00_Norm_0.50_ArScore_0.19,5.60 ± 2.29,14.75 ± 2.74,95.87 ± 1.41,95.42 ± 1.14
+Citeseer_GAT_inter0.10_intra0.50_total10000_Orbits_5847.00_Norm_0.42_ArScore_0.12,6.94 ± 4.10,13.61 ± 5.15,93.11 ± 4.54,93.16 ± 4.25
+Citeseer_GAT_inter0.10_intra0.50_total14000_Orbits_6265.00_Norm_0.28_ArScore_0.06,5.56 ± 4.07,10.22 ± 1.75,91.93 ± 2.09,91.73 ± 1.93
+"""
+
+import seaborn as sns
+models = ["GCN", "GAT", "GIN", "GraphSAGE", "MixHopGCN", "ChebGCN", "LINKX"]
+set3_colors = sns.color_palette("Set3", len(models))
+
+# Assign colors to models
+model_colors = {model: color for model, color in zip(models, set3_colors)}
+
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import interp1d
+from collections import defaultdict
+
+# Define sample data (replace this with your actual dataset)
+raw_data = [
+    ("GCN",
+     [0.9, 0.82, 0.72, 0.62, 0.52, 0.43, 0.35, 0.23, 0.19, 0.12, 0.06],
+     [99.65, 99.50, 99.42, 98.92, 98.61, 98.03, 97.65, 96.32, 96.49, 95.03, 91.81],
+     [0.08, 0.14, 0.16, 0.24, 0.33, 0.22, 0.47, 0.56, 0.74, 1.60, 2.05]),
+
+    ("GAT",
+     [0.9, 0.82, 0.72, 0.62, 0.52, 0.43, 0.35, 0.23, 0.19, 0.12, 0.06],
+     [99.42, 98.94, 99.17, 98.28, 98.31, 97.89, 97.81, 96.56, 95.87, 93.11, 91.93],
+     [0.14, 0.32, 0.14, 0.71, 0.74, 1.07, 0.41, 1.26, 1.41, 4.54, 2.09]),
+
+    ("GIN",
+     [0.9, 0.82, 0.72, 0.62, 0.52, 0.43, 0.35, 0.23, 0.19, 0.12, 0.06],
+     [95.43, 95.40, 94.69, 92.73, 90.53, 89.78, 86.46, 78.42, 82.29, 75.34, 61.25],
+     [1.10, 0.71, 1.14, 0.79, 1.34, 1.16, 2.00, 1.10, 1.19, 1.54, 1.04]),
+
+    ("GraphSAGE",
+     [0.9, 0.82, 0.72, 0.62, 0.52, 0.43, 0.35, 0.23, 0.19, 0.12, 0.06],
+     [96.19, 95.99, 94.18, 93.26, 91.69, 91.81, 86.72, 85.62, 82.41, 77.59, 74.68],
+     [2.00, 1.77, 1.73, 3.49, 2.63, 2.91, 4.49, 5.20, 6.02, 3.97, 5.96]),
+
+
+    ("MixHopGCN",
+        [0.9, 0.82, 0.72, 0.62, 0.52, 0.43, 0.35, 0.23, 0.19, 0.12, 0.06],
+        [99.69, 94.41, 99.03, 98.77, 98.22, 97.99, 96.282, 93.72, 94.55, 91.21, 88.347],
+        [0.06, 1.60, 0.25, 0.07, 0.27, 0.23, 0.442, 0.76, 0.52, 1.95, 3.176]),
+
+
+    ("ChebGCN",
+     [0.9, 0.82, 0.72, 0.62, 0.52, 0.43, 0.35, 0.23, 0.19, 0.12, 0.06],
+     [97.59, 97.76, 97.20, 94.90, 92.50, 88.75, 84.72, 79.21, 76.92, 72.16, 68.81],
+     [0.46, 0.41, 0.44, 0.58, 1.31, 1.86, 1.89, 1.42, 1.49, 2.07, 2.76]),
+
+    ("LINKX",
+        [0.9,   0.82,  0.72,  0.62,  0.52,  0.43,  0.35,  0.23,   0.19, 0.12, 0.06],
+        [97.30, 96.99, 96.81, 94.28, 92.82, 89.63, 86.69, 85.47, 83.48, 81.28, 79.68],
+        [0.08,  0.14,  0.16,  0.24,  0.33,  0.22,  0.47,  0.56,  0.74, 1.42, 1.49,]),
+
+]
+
+
+# Define new interpolated alpha values
+new_alpha = np.arange(0.1, 1.0, 0.1)
+
+# Create a new dictionary to store interpolated results
+interpolated_data = defaultdict(dict)
+
+# Perform interpolation for each model
+for model, alpha, best_valid, variance in raw_data:
+
+    # f_best_valid = interp1d(alpha, best_valid, kind='linear', fill_value="extrapolate")
+    # f_variance = interp1d(alpha, variance, kind='linear', fill_value="extrapolate")
+
+    interpolated_data[model]["alpha"] =  [1-i for i in alpha] 
+    interpolated_data[model]["best_valid"] = best_valid
+    interpolated_data[model]["variance"] = variance
+
+# Create the updated plot with error bars and reduced transparency for error bars
+fig, ax = plt.subplots(figsize=(10, 6))
+
+# Use 'tab10' colormap for distinguishable colors
+colors = plt.cm.get_cmap('tab10', len(interpolated_data))
+
+# Define different line styles and transparency settings
+dashed_models = {"ChebGCN", "LINKX", "GIN"}  # Models that will have dashed lines
+line_styles = {model: "--" if model in dashed_models else "-" for model in interpolated_data.keys()}
+alpha_values = {model: 0.5 if model in dashed_models else 1.0 for model in interpolated_data.keys()}  # Reduce opacity for dashed lines
+
+
+# Plot interpolated data with solid markers and error bars
+for idx, (model, values) in enumerate(interpolated_data.items()):
+    color = model_colors.get(model, f"C{idx}")  # consistent color fallback
+
+    # Plot main lines
+    ax.plot(
+        values["alpha"],
+        values["best_valid"],
+        linestyle=line_styles[model],
+        linewidth=2,
+        color=color,
+        label=model,
+        marker='o',
+        markersize=6,
+        markerfacecolor=color,
+        markeredgecolor='black',
+        markeredgewidth=0.8
+    )
+
+    ax.errorbar(
+        values["alpha"],
+        values["best_valid"],
+        yerr=values["variance"],
+        fmt='o',  # Markers only for error bars
+        color=color,
+        alpha=0.3,  # Reduced transparency for error bars
+        capsize=6,
+        elinewidth=2,
+        capthick=2
+    )
+fontsize = 22
+# Formatting the plot
+ax.set_xlabel(r"$\alpha$", fontsize=fontsize)
+ax.set_ylabel("AUC (/%)", fontsize=fontsize)
+ax.set_xticks(new_alpha)
+ax.set_yticks(np.arange(60, 101, 10))
+ax.tick_params(axis='both', labelsize=fontsize) 
+fontsize = 16
+ax.legend(fontsize=fontsize, loc="lower left")
+plt.tight_layout()
+
+plt.savefig('Citeseer_SYN_Real.pdf')
