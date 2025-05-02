@@ -27,3 +27,4 @@ baselines/dataset/
 syn_graph/dataset
 **/wandb/
 syn_real/dataset
+**/rec/

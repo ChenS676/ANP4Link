@@ -300,11 +300,11 @@ def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     df.to_csv(csv_path, mode='a', index=False, header=not file_exists)
     print(df)
     
-    plot_group_size_distribution(group_sizes, args, f'plots/{args.data_name}/group_size_log1p{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
-    plot_histogram_group_size_log_scale(group_sizes, metrics_after, args, f'plots/{args.data_name}/hist_group_size_log_{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
-    plot_graph_visualization(updated_graph_data, node_labels, args,  f'plots/{args.data_name}/wl_test_{args.data_name}_vis_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
+    # plot_group_size_distribution(group_sizes, args, f'plots/{args.data_name}/group_size_log1p{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
+    # plot_histogram_group_size_log_scale(group_sizes, metrics_after, args, f'plots/{args.data_name}/hist_group_size_log_{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
+    # plot_graph_visualization(updated_graph_data, node_labels, args,  f'plots/{args.data_name}/wl_test_{args.data_name}_vis_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
     print(f"Finished with inter_ratio={inter_ratio}, intra_ratio={intra_ratio}, total_edges={total_edges}")
-    return updated_graph_data, metrics_after, node_groups, node_labels, new_edges
+    return updated_graph_data, metrics_after# , node_groups, node_labels, new_edges
 
     
 def parse_args():
@@ -543,7 +543,7 @@ def main():
     
     plt.figure(figsize=(6, 4))
     # plt.plot(node_label, color='blue', marker='o', markersize=2)
-    plt.savefig(f'plots/{args.data_name}/wl_test_process.png')
+    # plt.savefig(f'plots/{args.data_name}/wl_test_process.png')
     for inter in inter_ratios:
         for intra in intra_ratios:
             for edge_factor in total_edges_list:
