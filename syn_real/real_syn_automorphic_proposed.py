@@ -172,101 +172,6 @@ def add_random_edges(graph_data, inter_ratio=0.5, intra_ratio=0.5, total_edges=1
     return Data(edge_index=updated_edge_index, num_nodes=graph_data.num_nodes, x=graph_data.x)
 
 
-def plot_group_size_distribution(group_sizes, args, file_name):
-    """ 
-    Plots the group size distribution with log-log scaling.
-    
-    Parameters:
-        group_sizes (list): Sizes of automorphism groups.
-        args (argparse.Namespace): Arguments containing dataset name.
-    """
-    # Not readable
-    # plt.figure()
-    # plt.plot(group_sizes)
-    # plt.xscale('log')
-    # plt.yscale('log')
-    # plt.xlabel("Group Index (log scale)")
-    # plt.ylabel("Group Size (log scale)")
-    # plt.title("Group Size Distribution (Log-Log Scale)")
-    # plt.savefig(f'plots/{args.data_name}/group_size_{args.data_name}.png')
-    # plt.close()
-
-    plt.figure()
-    plt.plot(np.log1p(group_sizes))
-    plt.xlabel("Group Index (log scale)")
-    plt.ylabel("Group Size (log scale)")
-    plt.title("Group Size Distribution (Log-Log Scale)")
-    plt.savefig(file_name)
-    plt.close()
-    
-
-def plot_histogram_group_size(group_sizes, metrics_before, args):
-    """ 
-    Plots a histogram of group sizes.
-    
-    Parameters:
-        group_sizes (list): Sizes of automorphism groups.
-        metrics_before (dict): Dictionary containing WL test metrics.
-        args (argparse.Namespace): Arguments containing dataset name.
-    """
-    plot_dir = f'plots/{args.data_name}'
-    os.makedirs(plot_dir, exist_ok=True)
-    plt.figure(figsize=(6, 4))
-    counts, bins, _ = plt.hist(group_sizes, bins=20, edgecolor='black', alpha=0.75, density=True)
-    counts = counts * 100 * np.diff(bins)
-    plt.bar(bins[:-1], counts, width=np.diff(bins), edgecolor='black', alpha=0.75)
-    plt.xlabel("Group Size")
-    plt.ylabel("Frequency")
-    plt.title(f"Histogram of Group Sizes {metrics_before['A_r_norm_1']}")
-    save_path = f'{plot_dir}/hist_group_size_{args.data_name}.png'
-    plt.savefig(save_path)
-    plt.close()
-    # print(f"Saved to {save_path}")
-    # print(f"Automorphism fraction before adding random edges: {metrics_before}")
-
-
-
-def plot_graph_visualization(graph_data, node_labels, args, save_path):
-    """ 
-    Plots a general visualization of the graph using WL-based node coloring.
-    
-    Parameters:
-        graph_data (torch_geometric.data.Data): The input graph data.
-        node_labels (list or array): Node labels for coloring.
-        args (argparse.Namespace): Arguments containing dataset name.
-    """
-    plt.figure(figsize=(6, 6))
-    G = to_networkx(graph_data, to_undirected=True)
-    nx.draw(G, node_size=10, font_size=8, cmap='Set1', node_color=node_labels, edge_color="gray")
-    plt.title("Graph Visualization with WL-based Node Coloring")
-    plt.savefig(save_path)
-    plt.close()
-
-
-def plot_histogram_group_size_log_scale(group_sizes, metrics_before, args, save_path):
-    """ 
-    Plots a histogram of group sizes with log scale on both axes.
-    
-    Parameters:
-        group_sizes (list): Sizes of automorphism groups.
-        metrics_before (dict): Dictionary containing WL test metrics.
-        args (argparse.Namespace): Arguments containing dataset name.
-    """
-
-    plt.figure(figsize=(6, 4))
-    counts, bins, _ = plt.hist(group_sizes, bins=20, edgecolor='black', alpha=0.75, density=True)
-    counts = counts * 100 * np.diff(bins)
-    plt.bar(bins[:-1], counts, width=np.diff(bins), edgecolor='black', alpha=0.75)
-    plt.yscale('log') 
-    plt.xlabel("Group Size (log scale)")
-    plt.ylabel("Frequency (log scale)")
-    plt.title(f"Histogram of Group Sizes {metrics_before['A_r_norm_1']}")
-    plt.savefig(save_path)
-    plt.close()
-    print(f"Saved to {save_path}")
-    print(f"Automorphism fraction before adding random edges: {metrics_before}")
-    
-    
 def parse_args():
     parser = argparse.ArgumentParser(description='homo')
     parser.add_argument('--data_name', type=str, default="Cora")
@@ -397,27 +302,6 @@ def get_metric_score(evaluator_hit, evaluator_mrr, pos_train_pred, pos_val_pred,
     return result
 
 
-@torch.no_grad()
-def test(model, score_func, data, x, evaluator_hit, evaluator_mrr, batch_size):
-    model.eval()
-    score_func.eval()
-    # adj_t = adj_t.transpose(1,0)
-    h = model(x, data['adj'].to(x.device))
-    # print(h[0][:10])
-    x = h
-    pos_train_pred = test_edge(score_func, data['train_val'], h, batch_size)
-    neg_valid_pred = test_edge(score_func, data['valid_neg'], h, batch_size)
-    pos_valid_pred = test_edge(score_func, data['valid_pos'], h, batch_size)
-    pos_test_pred = test_edge(score_func, data['test_pos'], h, batch_size)
-    neg_test_pred = test_edge(score_func, data['test_neg'], h, batch_size)
-    pos_train_pred = torch.flatten(pos_train_pred)
-    neg_valid_pred, pos_valid_pred = torch.flatten(neg_valid_pred),  torch.flatten(pos_valid_pred)
-    pos_test_pred, neg_test_pred = torch.flatten(pos_test_pred), torch.flatten(neg_test_pred)
-    # print('train valid_pos valid_neg test_pos test_neg', pos_train_pred.size(), pos_valid_pred.size(), neg_valid_pred.size(), pos_test_pred.size(), neg_test_pred.size())
-    result = get_metric_score(evaluator_hit, evaluator_mrr, pos_train_pred, pos_valid_pred, neg_valid_pred, pos_test_pred, neg_test_pred)
-    score_emb = [pos_valid_pred.cpu(),neg_valid_pred.cpu(), pos_test_pred.cpu(), neg_test_pred.cpu(), x.cpu()]
-    # print(result.keys())
-    return result, score_emb
 
 
 
@@ -443,6 +327,7 @@ def get_graph_statistics(G, graph_name="Graph"):
         "Max Degree": max_degree,
     }
     return stats
+
 
 
 def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
