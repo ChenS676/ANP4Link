@@ -549,7 +549,7 @@ def main():
             for edge_factor in total_edges_list:
                 total_edges = int(edge_factor * 1)
                 print(f"\n=== Running experiment: inter_ratio={inter}, intra_ratio={intra}, edge_factor={edge_factor} ===")
-                updated_graph_data, metrics_after, _, new_node_label, new_edges = perturb_disjoint(disjoint_graph, args, inter, intra, total_edges)
+                updated_graph_data, metrics_after = perturb_disjoint(disjoint_graph, args, inter, intra, total_edges)
                 # analyze_label_change_vs_degree(disjoint_graph, updated_graph_data, save_prefix='analysis')
 
 

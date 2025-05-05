@@ -40,7 +40,7 @@ from syn_real.gnn_utils import (
 )
 import matplotlib.pyplot as plt
 import networkx as nx
-
+import pandas as pd
 from gnn_ogb_heart import init_seed
 from torch_geometric.utils import train_test_split_edges, to_undirected
 import copy
@@ -53,7 +53,6 @@ from torch_geometric.datasets import Planetoid
 from ogb.linkproppred import Evaluator, PygLinkPropPredDataset
 from graphgps.utility.utils import mvari_str2csv
 from torch.utils.data import DataLoader
-from syn_real_generator import extract_induced_subgraph, use_lcc, perturb_disjoint, generate_perturbed_graph
 import wandb
 
 
@@ -84,11 +83,101 @@ import wandb
 dir_path = get_root_dir()
 log_print = get_logger('testrun', 'log', get_config_dir())
 DATASET_PATH = '/hkfs/work/workspace/scratch/cc7738-rebuttal/Universal-MP/baselines/dataset'
-
 PT_LIST = [f"plots/Citeseer/processed_graph_inter0.5_intra0.5_edges1000_auto0.7200_norm1_0.7676.pt"]
-    
-    
 
+
+def remove_random_edges(graph_data, inter_ratio=0.5, intra_ratio=0.5, total_edges=1000):
+    """
+    Removes random edges from within and between two graph copies in a controlled way.
+
+    Args:
+        graph_data (Data): The graph structure (PyG format).
+        inter_ratio (float): Fraction of edges to remove **between** the two graph copies.
+        intra_ratio (float): Fraction of edges to remove **within** each graph copy.
+        total_edges (int): Total number of edges to remove.
+
+    Returns:
+        Data: Graph with specified edges removed.
+        torch.Tensor: Tensor of removed edges.
+    """
+    edge_index = graph_data.edge_index.cpu()
+    num_nodes = graph_data.num_nodes // 2
+
+    # Separate edges into intra and inter
+    intra_mask = ((edge_index[0] < num_nodes) & (edge_index[1] < num_nodes)) | \
+                 ((edge_index[0] >= num_nodes) & (edge_index[1] >= num_nodes))
+    inter_mask = ~intra_mask
+
+    intra_edges = edge_index[:, intra_mask]
+    inter_edges = edge_index[:, inter_mask]
+
+    # Determine number of edges to remove
+    num_inter_remove = int(total_edges * inter_ratio)
+    num_intra_remove = total_edges - num_inter_remove
+
+    # Sample edges to remove
+    inter_remove_idx = np.random.choice(inter_edges.shape[1], min(num_inter_remove, inter_edges.shape[1]), replace=False)
+    intra_remove_idx = np.random.choice(intra_edges.shape[1], min(num_intra_remove, intra_edges.shape[1]), replace=False)
+
+    # Mask to keep edges
+    keep_edges = torch.ones(edge_index.shape[1], dtype=torch.bool)
+
+    # Build mapping from full edge index back to edge type masks
+    intra_full_indices = torch.where(intra_mask)[0]
+    inter_full_indices = torch.where(inter_mask)[0]
+
+    keep_edges[intra_full_indices[intra_remove_idx]] = False
+    keep_edges[inter_full_indices[inter_remove_idx]] = False
+
+    # Updated edge index
+    updated_edge_index = edge_index[:, keep_edges]
+    removed_edges = edge_index[:, ~keep_edges]
+
+    return Data(edge_index=updated_edge_index, num_nodes=graph_data.num_nodes, x=graph_data.x), removed_edges
+
+
+
+
+def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
+    """
+    Run the experiment with the given parameters.
+    
+    Parameters:
+        graph_data (torch_geometric.data.Data): The input graph data.
+        args (argparse.Namespace): Arguments containing dataset name.
+        inter_ratio (float): Fraction of edges to add between the two graph copies.
+        intra_ratio (float): Fraction of edges to add within each graph copy.
+        total_edges (int): Total number of random edges to add.
+    """
+    # Add random edges to the graph
+    new_edges = 0
+    if inter_ratio != 0 and intra_ratio != 0 and total_edges != 0:
+        # updated_graph_data, new_edges = add_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
+        updated_graph_data, new_edges = remove_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
+        print(new_edges)
+    else:
+        updated_graph_data = graph_data
+    # Convert to NetworkX graph for visualization
+    G = to_networkx(updated_graph_data, to_undirected=True)
+    num_nodes = updated_graph_data.num_nodes
+    # print degree distribution 
+    node_groups, node_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, num_nodes=num_nodes, num_iterations=30)
+    metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
+    metrics_after.update({'head': f'{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}'})
+    csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
+    file_exists = os.path.isfile(csv_path)
+    df = pd.DataFrame([metrics_after])
+    df.to_csv(csv_path, mode='a', index=False, header=not file_exists)
+    print(df)
+    
+    # plot_group_size_distribution(group_sizes, args, f'plots/{args.data_name}/group_size_log1p{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
+    # plot_histogram_group_size_log_scale(group_sizes, metrics_after, args, f'plots/{args.data_name}/hist_group_size_log_{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
+    # plot_graph_visualization(updated_graph_data, node_labels, args,  f'plots/{args.data_name}/wl_test_{args.data_name}_vis_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
+    print(f"Finished with inter_ratio={inter_ratio}, intra_ratio={intra_ratio}, total_edges={total_edges}")
+    return updated_graph_data, metrics_after# , node_groups, node_labels, new_edges
+
+    
+    
 # --- 1️⃣ Load Real-World Graph (Cora) ---
 def load_real_world_graph(dataset_name="Cora"):
     """
@@ -271,22 +360,22 @@ def parse_args():
     parser = argparse.ArgumentParser(description='homo')
     parser.add_argument('--data_name', type=str, default="Cora")
     parser.add_argument('--neg_mode', type=str, default='equal')
-    parser.add_argument('--gnn_model', type=str, default='MixHopGCN')
+    parser.add_argument('--gnn_model', type=str, default='GIN')
     parser.add_argument('--score_model', type=str, default='mlp_score')
     parser.add_argument('--pt_path', default=f"plots/Citeseer/processed_graph_inter0.5_intra0.5_edges1000_auto0.7200_norm1_0.7676.pt",
                         type=str)
     ##gnn setting
     parser.add_argument('--num_layers', type=int, default=3)
     parser.add_argument('--num_layers_predictor', type=int, default=3)
-    parser.add_argument('--hidden_channels', type=int, default=256)
+    parser.add_argument('--hidden_channels', type=int, default=32)
     parser.add_argument('--gnnout_hidden_channels', type=int, default=512)
     parser.add_argument('--dropout', type=float, default=0.1)
     parser.add_argument('--eval_metric', type=str, default='AUC')
     
     ### train setting
-    parser.add_argument('--batch_size', type=int, default=16384)
+    parser.add_argument('--batch_size', type=int, default=2**8)
     parser.add_argument('--lr', type=float, default=0.001)
-    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--eval_steps', type=int, default=1)
     parser.add_argument('--runs', type=int, default=1)
     parser.add_argument('--kill_cnt',           dest='kill_cnt',      default=20,    type=int,       help='early stopping')
@@ -294,6 +383,7 @@ def parse_args():
     parser.add_argument('--l2',		type=float,             default=0.0,			help='L2 Regularization for Optimizer')
     parser.add_argument('--seed', type=int, default=999)
 
+    # 
     parser.add_argument('--save', action='store_true', default=False)
     parser.add_argument('--use_saved_model', action='store_true', default=False)
     parser.add_argument('--device', type=int, default=0)
@@ -307,7 +397,7 @@ def parse_args():
     parser.add_argument('--cat_n2v_feat', default=False, action='store_true')
     parser.add_argument('--test_batch_size', type=int, default=1024 * 64) 
     parser.add_argument('--use_hard_negative', default=False, action='store_true')
-    parser.add_argument('--wandb_log', default=False, action='store_true')
+    parser.add_argument('--wandb_log', default=True, action='store_true')
     parser.add_argument('--metric', type=str, default='AUC')
     parser.add_argument('--inter_ratio', type=float, required=False, help='Inter ratio', default=0.5)
     parser.add_argument('--intra_ratio', type=float, required=False, help='Intra ratio', default=0.5)
@@ -591,13 +681,13 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
 
     args.name_tag = (
         f'{args.data_name}_'
+        f'Orbits_{metrics["Number of Unique Groups (C_auto)"]:.2f}_'
+        f'ArScore_{metrics["automorphism_score"]:.2f}'
         f'{args.gnn_model}_'
+        f'{args.score_model}_'
         f'inter{inter:.2f}_'
         f'intra{intra:.2f}_'
         f'total{total_edges:.0f}_'
-        f'Orbits_{metrics["Number of Unique Groups (C_auto)"]:.2f}_'
-        f'Norm_{metrics["A_r_norm_1"]:.2f}_'
-        f'ArScore_{metrics["automorphism_score"]:.2f}'
     )
 
     # for batch_size, lr in itertools.product(hyperparams['batch_size'], hyperparams['lr']):
@@ -608,7 +698,7 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
         if args.wandb_log:
             wandb.init(
                 project=f"{args.data_name}_",
-                name=f"{args.data_name}_{args.gnn_model}_{args.score_model}_{args.name_tag}_{args.runs}"
+                name=f"{args.data_name}_{args.batch_size}{args.lr}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
             )
             wandb.config.update(args)
         print(f'#################################          Run {run}          #################################')
@@ -695,7 +785,7 @@ def main():
         inter_ratios = [0.1]   
         intra_ratios =  [0.5]
         total_edges_list =  [0.2, 1, 4, 7, 12, 18, 20, 28] #  
-        multi_factor = 250 
+        multi_factor = 250
 
     elif args.data_name == 'Citeseer':
         # Citeseer

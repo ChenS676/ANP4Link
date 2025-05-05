@@ -641,7 +641,7 @@ def test(model, score_func, data, evaluation_edges, emb, evaluator_hit, evaluato
 
 def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
     device = f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu'
-    device = torch.device(device)
+    # device = 'cpu'
     data = copy.deepcopy(data)
     edge_index = data.edge_index
     data.adj_t = SparseTensor.from_edge_index(
@@ -686,7 +686,6 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
             print(key1, key2, split_edge[key1][key2].shape[0])
 
     # data = data2dict(data, split_edge, args.data_name)
-    device = torch.device(f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu')
     x = data.x
     train_pos = split_edge['train']['edge'].to(x.device)
     in_channels = x.size(1)
@@ -856,7 +855,7 @@ def main():
         # Citeseer
         inter_ratios = [0.1] # Try also: 0.1–0.9
         intra_ratios = [0.5]    # Fixed intra ratio
-        total_edges_list = [0.2, 1, 2, 3, 4, 5, 7, 8, 10, 14]
+        total_edges_list = [ 5, 7, 8, 10, 14]
         multi_factor = 1000 
         
     elif args.data_name == 'ogbl-ddi':

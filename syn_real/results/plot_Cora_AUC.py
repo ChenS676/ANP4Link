@@ -16,7 +16,7 @@ raw_data = [
 
     ("GIN",
      [0.81, 0.70, 0.63, 0.49, 0.40, 0.29, 0.19, 0.17, 0.10],
-     [96.83, 95.76, 95.53, 94.91, 84.81, 82.49, 70.24, 72.01, 65.24],
+     [91.83, 95.76, 95.53, 94.91, 84.81, 82.49, 70.24, 72.01, 65.24],
      [0.70, 0.78, 0.59, 0.90, 0.14, 0.14, 0.78, 0.96, 0.38]),
 
     ("GraphSAGE",
@@ -30,53 +30,47 @@ raw_data = [
      [0.17, 0.09, 0.13, 0.20, 0.25, 0.22, 0.50, 0.50, 0.39]),
 
     ("ChebGCN",
-    [0.81, 0.70, 0.63, 0.49, 0.40, 0.29, 0.19, 0.17, 0.10],
-     [98.41, 98.19, 97.82, 96.56, 96.76, 94.09, 91.18, 86.24, 77.29],
-     [0.13, 0.22, 0.21, 0.79, 0.32, 0.56, 1.02, 1.77, 3.20]),
+     [0.81, 0.70, 0.63, 0.50, 0.49, 0.40, 0.29, 0.19, 0.17, 0.10],
+     [98.41, 98.19, 97.82, 96.56, 96.76, 94.09, 91.18, 86.24, 84.88, 77.29],
+     [0.13, 0.22, 0.21, 0.79, 0.32, 0.56, 1.02, 1.77, 1.42, 3.20]),
 
-    ("Proposed w.o. D1", 
-    [0.81, 0.70, 0.63, 0.49, 0.40, 0.29, 0.19, 0.17, 0.10],
-    [99.76, 99.74, 99.77, 99.76, 99.83, 99.67, 99.63, 99.54, 99.62],
-    [0.07, 0.07, 0.11, 0.05, 0.10, 0.12, 0.07, 0.30, 0.20]),
+    ("LINKX",
+     [0.81,  0.69,  0.62,  0.49,  0.41, 0.30, 0.20, 0.18, 0.11],
+     [97.30, 96.99, 96.81, 94.28, 92.82, 89.63, 86.69, 85.47, 83.48],
+     [0.32, 0.15, 0.18, 0.15,  0.13,  0.29, 0.15, 0.12, 0.18]),
 
-    ("Proposed w.o D2", 
-    [0.81, 0.70, 0.63, 0.49, 0.40, 0.29, 0.19, 0.17, 0.10],
-    [99.92, 99.84, 99.73, 99.71, 99.73, 99.74, 99.78, 99.83, 99.78],
-    [0.04, 0.11, 0.10, 0.10, 0.05, 0.06, 0.12, 0.08, 0.13]),
-
-
-    ("Proposed", 
-    [0.81, 0.70, 0.63, 0.49, 0.40, 0.29, 0.19, 0.17, 0.10],
-    [99.73, 99.74, 99.86, 99.83, 99.76, 99.81, 99.80, 99.78, 99.94],
-    [0.03, 0.04, 0.05, 0.00, 0.03, 0.03, 0.03, 0.07, 0.08,])
+    ("Proposed w.o. D1",
+     [0.81, 0.7, 0.63,  0.49, 0.4, 0.29, 0.19, 0.17, 0.1],
+     [99.89, 99.83, 99.77, 99.76, 99.76, 99.74, 99.67, 99.63, 99.62],
+     [0.08, 0.1, 0.11, 0.07, 0.05, 0.07, 0.12, 0.07, 0.22]),
+    ("Proposed w.o D2",
+     [0.81, 0.7, 0.63,  0.49, 0.4, 0.29, 0.19, 0.17, 0.1],
+     [99.9, 99.8, 99.79, 99.78, 99.75, 99.74, 99.73, 99.71, 99.9],
+     [0.05, 0.05, 0.07, 0.12, 0.03, 0.07, 0.04, 0.03, 0.05]),
+    ("Proposed",
+     [0.81, 0.7, 0.63,  0.49, 0.4, 0.29, 0.19, 0.17, 0.1],
+     [99.94, 99.86, 99.83, 99.81, 99.8, 99.78, 99.76, 99.74, 99.73],
+     [0.03, 0.03, 0.07, 0.0, 0.05, 0.04, 0.03, 0.07, 0.08]),
 ]
 
 import seaborn as sns
 models = ["GCN", "GAT", "GIN", "GraphSAGE", "MixHopGCN", "ChebGCN", "LINKX"]
-proposed = ["Proposed w.o. D1", "Proposed w.o D2", "Proposed"]
-
 set3_colors = sns.color_palette("Set3", len(models))
 model_colors = {model: color for model, color in zip(models, set3_colors)}
 new_alpha = np.arange(0.1, 1.0, 0.1)
 interpolated_data = defaultdict(dict)
-
-
 for model, alpha, best_valid, variance in raw_data:
-    
-    print(model)
-    print(len(alpha))
+
     interpolated_data[model]["alpha"] =  [1-i for i in alpha] 
     interpolated_data[model]["best_valid"] = best_valid
-    print(len(best_valid))
     interpolated_data[model]["variance"] = variance
-    print(len(variance))
 
 fig, ax = plt.subplots(figsize=(10, 6))
 colors = plt.cm.get_cmap('tab10', len(interpolated_data))
 dashed_models = {"ChebGCN", "LINKX", "GIN"}  # Models that will have dashed lines
 line_styles = {model: "--" if model in dashed_models else "-" for model in interpolated_data.keys()}
 alpha_values = {model: 0.5 if model in dashed_models else 1.0 for model in interpolated_data.keys()}  # Reduce opacity for dashed lines
-
+model_colors["GAT"] = "pink"
 for idx, (model, values) in enumerate(interpolated_data.items()):
     color = model_colors.get(model, f"C{idx}")  # consistent color fallback
 

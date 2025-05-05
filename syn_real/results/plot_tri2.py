@@ -1,3 +1,4 @@
+"""
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import interp1d
@@ -132,6 +133,7 @@ ax.legend(fontsize=13, loc="lower left", frameon=False, ncol=1)
 plt.tight_layout()
 plt.savefig("Tri_SYN_Real2.pdf", bbox_inches='tight')
 plt.show()
+"""
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
