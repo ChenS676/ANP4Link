@@ -37,6 +37,7 @@
             // "--maskinput",
             // "--jk",  "--use_xlin",  "--tailact",
             // "--cat_wl_feat", "--wl_process", "norm"]
+            // "args": ["--maskinput"]
         },
     ]
 }

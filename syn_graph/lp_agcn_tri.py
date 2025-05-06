@@ -331,6 +331,7 @@ def test(model, predictor, data, split_edge, evaluator, batch_size,
     results = get_metric_score(evaluator_hit, evaluator_mrr, pos_train_pred, pos_valid_pred, neg_valid_pred, pos_test_pred, neg_test_pred)
     return results
 
+
 def get_metric_score(evaluator_hit, evaluator_mrr, pos_train_pred, pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
 
     # result_hit = evaluate_hits(evaluator_hit, pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
@@ -531,13 +532,10 @@ def main():
                 loss = train(model, predictor, data, split_edge, optimizer,
                             args.batch_size, args.maskinput, [], alpha)
                 wandb.log({'train_loss': loss.item()}, step = epoch)
-                # print(f"trn time {time.time()-t1:.2f} s", flush=True)
                 
                 if epoch % 1 == 0:
-                    # t1 = time.time()
                     results = test(model, predictor, data, split_edge, evaluator,
                                 args.testbs, args.use_valedges_as_input)
-                    # print(f"test time {time.time()-t1:.2f} s")
                     for key, result in results.items():
                         loggers[key].add_result(run, result)
                         wandb.log({f"Metrics/{key}": result[-1]}, step=epoch)
