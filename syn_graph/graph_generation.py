@@ -190,7 +190,7 @@ def generate_graph(N, type=GraphType.RANDOM, seed=None, degree=None):
     # sample which random type to use
     if type == GraphType.RANDOM:
         type = np.random.choice([t for (t, _) in MIXTURE], 1, p=[pr for (_, pr) in MIXTURE])[0]
-
+        print("Random type chosen: ", type)
     # generate the graph structure depending on the type
     if type == GraphType.ERDOS_RENYI:
         if degree == None: degree = random.random() * N

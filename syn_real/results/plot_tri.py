@@ -41,9 +41,18 @@ raw_data = [
      [0.0, 0.0, 0.0, 0.0, 0.0]),
 
 ]
+TITLE_SIZE = 26
+LABEL_SIZE = 35
+TICK_SIZE = 35
+LEGEND_SIZE = 20
+LEGEND_TITLE_SIZE = 18
+ANNOTATION_SIZE = 24
+FIGSIZE = (10, 8)
+DPI = 300
+LEGENG_SIZE = 15
 
 # Define new interpolated alpha values
-new_alpha = np.arange(0.1, 1.0, 0.1)
+new_alpha = np.arange(0.1, 1.0, 0.2)
 
 # Create a new dictionary to store interpolated results
 interpolated_data = defaultdict(dict)
@@ -122,15 +131,14 @@ for idx, (model, values) in enumerate(interpolated_data.items()):
         capthick=2
     )
 
-fontsize = 16
-# Formatting the plot
-ax.set_xlabel(r"$\alpha$", fontsize=fontsize)
-ax.set_ylabel("AUC (/%)", fontsize=fontsize)
+
+
+ax.set_xlabel(r"$\alpha$", fontsize=LABEL_SIZE)
+ax.set_ylabel("AUC (/%)", fontsize=LABEL_SIZE)
 ax.set_xticks(new_alpha)
-ax.set_yticks(np.arange(0, 102, 10))
-ax.tick_params(axis='both', labelsize=fontsize) 
-fontsize = 16
-ax.legend(fontsize=18, loc="lower left")
+ax.set_yticks(np.arange(0, 102, 20))
+ax.tick_params(axis='both', labelsize=LEGEND_SIZE) 
+ax.legend(fontsize=LEGEND_SIZE , loc="lower left")
 plt.tight_layout()
 
 plt.savefig('Tri_SYN_Real.pdf')

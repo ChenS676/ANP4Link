@@ -56,6 +56,16 @@ raw_data = [
      [7.34, 1.87, 14.99, 20.85, 10.83, 2.04, 13.77, 6.13, 3.3]),
 ]
 
+TITLE_SIZE = 26
+LABEL_SIZE = 35
+TICK_SIZE = 35
+LEGEND_SIZE = 24
+LEGEND_TITLE_SIZE = 24
+ANNOTATION_SIZE = 24
+FIGSIZE = (10, 8)
+DPI = 300
+LEGENG_SIZE = 15
+
 import seaborn as sns
 models = ["GCN", "GAT", "GIN", "GraphSAGE", "MixHopGCN", "ChebGCN", "LINKX"]
 set3_colors = sns.color_palette("Set3", len(models))
@@ -113,27 +123,26 @@ y_ticks = np.arange(y_min, y_max + 1, 20)
 # X-axis ticks
 x_ticks = sorted(set([round(a, 2) for a in interpolated_data["GCN"]["alpha"]]))
 
+
 # Axis labels and ticks
-fontsize = 22
-ax.set_xlabel(r"$\alpha$", fontsize=fontsize)
-ax.set_ylabel("MRR (/%)", fontsize=fontsize)
+ax.set_xlabel(r"$\alpha_{\mathcal{V}}$", fontsize=LABEL_SIZE)
+ax.set_ylabel("MRR (/%)", fontsize=LABEL_SIZE)
 ax.set_xticks(x_ticks)
 ax.set_yticks(y_ticks)
-ax.tick_params(axis='both', labelsize=fontsize)
-
+ax.tick_params(axis='both', labelsize=TICK_SIZE)
 
 # Legend
-fontsize = 8
 ax.legend(
-    fontsize=10,
+    fontsize=LEGENG_SIZE,
     loc="upper right",
-    bbox_to_anchor=(1, 1),  # explicitly anchors to top-right
+    bbox_to_anchor=(1, 1),  
     ncol=3,
-    frameon=False  # optional: remove box around legend
+    frameon=False 
 )
 
 plt.tight_layout()
 
 # Save figure
-plt.savefig('Cora_SYN_Real_MRR.pdf')
+plt.savefig('Cora_SYN_Real_MRR_main.pdf')
 plt.show()
+

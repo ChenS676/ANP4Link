@@ -496,7 +496,7 @@ def compute_automorphism_metrics(node_groups, num_nodes):
     A_r_norm_1 = 1 + np.log(A_r1) / np.log(num_nodes) # lower is less automorphism
     A_r_norm_2 = np.log(np.sum(group_sizes**2)) / (2 * np.log(num_nodes)) 
     A_r_log = (np.log(np.sum(group_sizes**2)) - np.log(num_nodes**2)) / np.log(num_nodes)
-    automorphism_score = 1 - (len(node_groups) / num_nodes)
+    automorphism_score = (len(node_groups) / num_nodes)
     return {
         "Automorphism Ratio (A_r1)": A_r1,
         "A_r_norm_2": A_r_norm_2,
@@ -682,25 +682,25 @@ def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
     
     metrics.update({'data_name': str(graph_type)})
     print(metrics)
-    csv_path = '/hkfs/work/workspace/scratch/cc7738-rebuttal/Universal-MP/syn_graph/summary.csv'
+    csv_path = '/hkfs/work/workspace/scratch/cc7738-rebuttal/ANP4Link/syn_graph/summary.csv'
     file_exists = os.path.isfile(csv_path)
     pd.DataFrame([metrics]).to_csv(csv_path, mode='a', index=False, header=not file_exists)
     print(f"save to summary.csv.")
 
-    plt.figure()
-    plt.plot(group_sizes)
-    plt.savefig(f'group_size_{graph_type}_{N}.png')
-    print(f"save to group_size_{graph_type}_{N}.png.")
+    # plt.figure()
+    # plt.plot(group_sizes)
+    # plt.savefig(f'group_size_{graph_type}_{N}.png')
+    # print(f"save to group_size_{graph_type}_{N}.png.")
     
-    # Visualiz  e with WL-based coloring
-    plt.figure(figsize=(6, 6))
-    nx.draw(G, pos if is_grid else None, node_size=200, font_size=8, cmap='Set1', node_color=node_labels, edge_color="gray")
-    plt.title("Graph Visualization with WL-based Node Coloring")
-    plt.savefig(f'wl_test_{graph_type}_{N}.pdf')
-    plt.figure()
-    plt.plot(group_sizes)
-    plt.savefig(f'group_size_{graph_type}_{N}.pdf')
-    print(f"save to group_size_{graph_type}_{N}.pdf")
+    # # Visualiz  e with WL-based coloring
+    # plt.figure(figsize=(6, 6))
+    # nx.draw(G, pos if is_grid else None, node_size=200, font_size=8, cmap='Set1', node_color=node_labels, edge_color="gray")
+    # plt.title("Graph Visualization with WL-based Node Coloring")
+    # plt.savefig(f'wl_test_{graph_type}_{N}.pdf')
+    # plt.figure()
+    # plt.plot(group_sizes)
+    # plt.savefig(f'group_size_{graph_type}_{N}.pdf')
+    # print(f"save to group_size_{graph_type}_{N}.pdf")
 
 
 def process_perturbation(N, data_name):
@@ -751,30 +751,99 @@ def test_automorphism():
     torch.save(node_labels, f"{args.data_name}_wl_labels.pt")
 
     metrics, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
-    plt.figure()
-    plt.plot(group_sizes)
-    plt.savefig(f'group_size_{args.data_name}.png')
+    # plt.figure()
+    # plt.plot(group_sizes)
+    # plt.savefig(f'group_size_{args.data_name}.png')
     
     metrics.update({'data_name': args.data_name})
     print(metrics)
-    pd.DataFrame([metrics]).to_csv(f'{args.data_name}_alpha.csv', index=False)
+    # pd.DataFrame([metrics]).to_csv(f'{args.data_name}_alpha.csv', index=False)
 
-    
-    process_graph(1000, GraphType.BARABASI_ALBERT)
-    process_graph(500, GraphType.BARABASI_ALBERT)
-    process_graph(10, GraphType.BARABASI_ALBERT)
-    process_graph(100, GraphType.TREE)
+    MIXTURE = [(GraphType.ERDOS_RENYI, 0.2), (GraphType.BARABASI_ALBERT, 0.2), (GraphType.GRID, 0.05),
+            (GraphType.CAVEMAN, 0.05), (GraphType.TREE, 0.15), (GraphType.LADDER, 0.05),
+            (GraphType.LINE, 0.05), (GraphType.STAR, 0.05), (GraphType.CATERPILLAR, 0.1), (GraphType.LOBSTER, 0.1)]
+
+    for iter in range(10):
+        for N in [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000, 3000, 4000, 5000]:
+                for (type, a) in MIXTURE:
+                    try:
+                        process_graph(N, type)
+                    except:
+                        pass
+    exit(-1)
+    # process_graph(900, GraphType.BARABASI_ALBERT)
+    # process_graph(800, GraphType.BARABASI_ALBERT)
+    # process_graph(700, GraphType.BARABASI_ALBERT)
+    # process_graph(600, GraphType.BARABASI_ALBERT)
+    # process_graph(500, GraphType.BARABASI_ALBERT)
+    # process_graph(400, GraphType.BARABASI_ALBERT)
+    # process_graph(300, GraphType.BARABASI_ALBERT)
+    # process_graph(200, GraphType.BARABASI_ALBERT)
+    # process_graph(100, GraphType.BARABASI_ALBERT)
+    # process_graph(90, GraphType.BARABASI_ALBERT)
+    # process_graph(80, GraphType.BARABASI_ALBERT)
+    # process_graph(70, GraphType.BARABASI_ALBERT)
+    # process_graph(60, GraphType.BARABASI_ALBERT)
+    # process_graph(50, GraphType.BARABASI_ALBERT)
+    # process_graph(40, GraphType.BARABASI_ALBERT)
+    # process_graph(30, GraphType.BARABASI_ALBERT)
+    # process_graph(20, GraphType.BARABASI_ALBERT)
+    # process_graph(10, GraphType.BARABASI_ALBERT)
+
+    # process_graph(2000, GraphType.BARABASI_ALBERT)
+    # process_graph(1000, GraphType.BARABASI_ALBERT)
+    # process_graph(500, GraphType.BARABASI_ALBERT)
+
+
+    process_graph(6, GraphType.TREE)
+    process_graph(7, GraphType.TREE)
     process_graph(10, GraphType.TREE)
+    process_graph(15, GraphType.TREE)
+    process_graph(20, GraphType.TREE)
+    process_graph(25, GraphType.TREE)
+    process_graph(30, GraphType.TREE)
+    process_graph(40, GraphType.TREE)
+    # # Two Extreme Cases:
+    # process_graph(1000, 'GraphType.COMPLETE', is_grid=True, label="GraphType.COMPLETE")  # Regular tiling case
+    # process_graph(500, 'GraphType.COMPLETE', is_grid=True, label="GraphType.COMPLETE")  # Regular tiling case
+    # process_graph(100, 'GraphType.COMPLETE', is_grid=True, label="GraphType.COMPLETE")  # Regular tiling case
+    # process_graph(40, 'GraphType.COMPLETE', is_grid=True, label="GraphType.COMPLETE")  # Regular tiling case
 
-    # Two Extreme Cases:
-    process_graph(40, 'GraphType.COMPLETE', is_grid=True, label="GraphType.COMPLETE")  # Regular tiling case
+    process_graph(20, GraphType.STAR, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    process_graph(100, GraphType.STAR, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    process_graph(200, GraphType.STAR, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    process_graph(2000, GraphType.STAR, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    process_graph(300, GraphType.STAR, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    process_graph(800, GraphType.STAR, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    process_graph(1400, GraphType.STAR, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    process_graph(2400, GraphType.STAR, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+
+
+    # process_graph(2000, GraphType.ERDOS_RENYI, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    # process_graph(1000, GraphType.ERDOS_RENYI, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    # process_graph(200, GraphType.ERDOS_RENYI, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    # process_graph(100, GraphType.ERDOS_RENYI, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    # process_graph(20, GraphType.ERDOS_RENYI, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    process_graph(5, GraphType.ERDOS_RENYI, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    process_graph(6, GraphType.ERDOS_RENYI, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    process_graph(7, GraphType.ERDOS_RENYI, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+    process_graph(10, GraphType.ERDOS_RENYI, is_grid=True, label="GraphType.ERDOS_RENYI")  # Regular tiling case
+
     process_graph(20, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR")  # Regular tiling case
-    process_graph(4, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
-    process_graph(100, 'GraphType.COMPLETE', is_grid=True, label="GraphType.COMPLETE")  # Regular tiling case
     process_graph(30, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR")  # Regular tiling case
-    process_graph(5, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
     process_graph(300, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR")  # Regular tiling case
-    process_graph(100, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
+    process_graph(500, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR")  # Regular tiling case
+    process_graph(1000, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR")  # Regular tiling case
+
+
+    process_graph(2000, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
+    process_graph(1500, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
+    process_graph(2200, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
+    process_graph(3100, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
+    process_graph(5000, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
+    process_graph(4000, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
+
+
     exit(-1)
     G, num_nodes, edge_index = dataloader(args)
     

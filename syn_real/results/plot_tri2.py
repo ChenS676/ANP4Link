@@ -145,13 +145,13 @@ raw_data = [
      [15.46, 30.94, 59.13, 68.91, 65.49, 62.07, 77.8, 82.69, 87.78, 99.97, 100.00],
      [19.45, 20.97, 22.18, 24.28, 21.0, 17.71, 18.6, 20.76, 9.81, 0.44, 0.0]),
 
-    ("GAT", [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0],
-     [44.21, 60.44, 73.38, 80.91, 72.24, 59.57, 84.55, 92.69, 96.53, 97.47, 98.72],
-     [37.37, 33.3, 28.92, 25.42, 24.98, 24.53, 20.16, 17.05, 11.91, 8.35, 3.41]),
+    # ("GAT", [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0],
+    #  [44.21, 60.44, 73.38, 80.91, 72.24, 59.57, 84.55, 92.69, 96.53, 97.47, 98.72],
+    #  [37.37, 33.3, 28.92, 25.42, 24.98, 24.53, 20.16, 17.05, 11.91, 8.35, 3.41]),
 
-    ("GIN", [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0],
-     [63.85, 65.23, 70.21, 70.27, 72.31, 74.36, 85.72, 98.3, 98.05, 98.12, 98.15],
-     [16.93, 16.52, 17.33, 18.04, 15.07, 12.1, 10.41, 7.85, 7.49, 7.5, 8.24]),
+    # ("GIN", [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0],
+    #  [63.85, 65.23, 70.21, 70.27, 72.31, 74.36, 85.72, 98.3, 98.05, 98.12, 98.15],
+    #  [16.93, 16.52, 17.33, 18.04, 15.07, 12.1, 10.41, 7.85, 7.49, 7.5, 8.24]),
 
     ("GraphSAGE", [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0],
      [34.86, 48.31, 65.25, 75.35, 77.77, 80.18, 84.08, 88.81, 91.59, 96.02, 98.85],
@@ -169,18 +169,102 @@ raw_data = [
      [83.43, 86.95, 85.47, 88.11, 83.6, 79.1, 84.94, 88.57, 88.24, 88.76, 83.66],
      [12.45, 15.93, 19.09, 22.25, 15.1, 7.95, 15.48, 23.69, 20.64, 18.48, 14.62]),
 
-    ("Proposed w.o. D1", [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0],
-     [84.35, 87.27, 88.44, 91.27, 87.92, 84.58, 92.2, 100.0, 98.22, 99.04, 98.61],
-     [30.61, 28.18, 27.25, 24.89, 26.51, 28.13, 13.93, 0.16, 14.85, 29.87, 44.76]),
+    # ("Proposed w.o. D1", [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0],
+    #  [84.35, 87.27, 88.44, 91.27, 87.92, 84.58, 92.2, 100.0, 98.22, 99.04, 98.61],
+    #  [30.61, 28.18, 27.25, 24.89, 26.51, 28.13, 13.93, 0.16, 14.85, 29.87, 44.76]),
 
-    ("Proposed w.o D2", [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0],
-     [84.62, 87.85, 91.47, 100.0, 96.06, 92.11, 96.04, 99.08, 99.62, 100.0, 99.74],
-     [43.23, 28.35, 13.6, 0.0, 14.42, 28.84, 15.32, 0.07, 7.71, 14.18, 21.05]),
+    # ("Proposed w.o D2", [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0],
+    #  [84.62, 87.85, 91.47, 100.0, 96.06, 92.11, 96.04, 99.08, 99.62, 100.0, 99.74],
+    #  [43.23, 28.35, 13.6, 0.0, 14.42, 28.84, 15.32, 0.07, 7.71, 14.18, 21.05]),
 
     ("Proposed", [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0],
      [99.55, 99.91, 100.0, 99.77, 99.38, 100.0, 99.65, 100.0, 100.0, 99.77, 99.94],
      [0.0, 0.22, 0.0, 0.0, 0.0, 0.0, 0.09, 0.79, 0.08, 0.0, 0.14]),
 ]
+
+# # === Prepare and plot ===
+# plot_data = defaultdict(dict)
+# for model, alpha, best_valid, variance in raw_data:
+#     plot_data[model]["alpha"] = alpha
+#     plot_data[model]["best_valid"] = best_valid
+#     plot_data[model]["variance"] = variance
+
+# baselines = ["GCN", "GAT", "GIN", "GraphSAGE", "MixHopGCN", "ChebGCN", "LINKX"]
+# proposed = ["Proposed w.o. D1", "Proposed w.o D2", "Proposed"]
+
+# def is_yellow(rgb): return rgb[0] > 0.9 and rgb[1] > 0.9 and rgb[2] < 0.6
+# palette = sns.color_palette("Set2", len(baselines))
+# baseline_colors = [c for c in palette if not is_yellow(c)][:len(baselines)]
+# model_colors = {m: c for m, c in zip(baselines, baseline_colors)}
+# proposed_colors = [(0.1, 0.3, 0.6), (0.2, 0.5, 0.2), (0.6, 0.1, 0.2)]
+# model_colors.update({m: c for m, c in zip(proposed, proposed_colors)})
+
+# dashed_models = {"ChebGCN", "LINKX", "GIN"}
+# line_styles = {m: "--" if m in dashed_models else "-" for m in plot_data}
+
+
+# fig, ax = plt.subplots(figsize=(10, 8))
+
+# for idx, (model, values) in enumerate(plot_data.items()):
+#     color = model_colors.get(model, f"C{idx}")
+#     alphas = values["alpha"]
+#     scores = values["best_valid"]
+#     variances = values["variance"]
+
+#     ax.plot(
+#         alphas, scores,
+#         linestyle=line_styles.get(model, "-"),
+#         linewidth=2.2, color=color,
+#         label=model, marker='o',
+#         markersize=5.5, markerfacecolor=color,
+#         markeredgecolor='black', markeredgewidth=0.6
+#     )
+
+#     lower_var = np.array(variances) * 0.8
+#     upper_var = np.array(variances) * 0.2
+
+#     ax.errorbar(
+#         alphas, scores, yerr=[lower_var, upper_var],
+#         fmt='o', color=color, alpha=0.25,
+#         capsize=4, elinewidth=1.4, capthick=1.4
+#     )
+
+# fontsize = 16
+# ax.set_xlabel(r"$\alpha$", fontsize=fontsize)
+# ax.set_ylabel("AUC (/%)", fontsize=fontsize)
+# ax.set_xticks(sorted(set(alphas)))
+# ax.set_yticks(np.arange(0, 110, 10))
+# ax.tick_params(axis='both', labelsize=fontsize)
+# ax.legend(fontsize=13, loc="lower left", frameon=False, ncol=1)
+# plt.tight_layout()
+# plt.savefig("Tri_SYN_Real2_ALL.pdf", bbox_inches='tight')
+# plt.show()
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+from collections import defaultdict
+
+# === Configuration ===
+# TITLE_SIZE = 26
+# LABEL_SIZE = 24
+# TICK_SIZE = 24
+# LEGEND_SIZE = 24
+# LEGEND_TITLE_SIZE = 24
+# ANNOTATION_SIZE = 24
+# FIGSIZE = (10, 8)
+# DPI = 300
+
+TITLE_SIZE = 26
+LABEL_SIZE = 35
+TICK_SIZE = 35
+LEGEND_SIZE = 20
+LEGEND_TITLE_SIZE = 18
+ANNOTATION_SIZE = 24
+FIGSIZE = (10, 8)
+DPI = 300
+LEGENG_SIZE = 15
 
 # === Prepare and plot ===
 plot_data = defaultdict(dict)
@@ -190,7 +274,7 @@ for model, alpha, best_valid, variance in raw_data:
     plot_data[model]["variance"] = variance
 
 baselines = ["GCN", "GAT", "GIN", "GraphSAGE", "MixHopGCN", "ChebGCN", "LINKX"]
-proposed = ["Proposed w.o. D1", "Proposed w.o D2", "Proposed"]
+proposed = ["Proposed"]
 
 def is_yellow(rgb): return rgb[0] > 0.9 and rgb[1] > 0.9 and rgb[2] < 0.6
 palette = sns.color_palette("Set2", len(baselines))
@@ -202,7 +286,7 @@ model_colors.update({m: c for m, c in zip(proposed, proposed_colors)})
 dashed_models = {"ChebGCN", "LINKX", "GIN"}
 line_styles = {m: "--" if m in dashed_models else "-" for m in plot_data}
 
-fig, ax = plt.subplots(figsize=(10, 8))
+fig, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI)
 
 for idx, (model, values) in enumerate(plot_data.items()):
     color = model_colors.get(model, f"C{idx}")
@@ -227,14 +311,14 @@ for idx, (model, values) in enumerate(plot_data.items()):
         fmt='o', color=color, alpha=0.25,
         capsize=4, elinewidth=1.4, capthick=1.4
     )
+new_alpha = np.arange(0.1, 1.0, 0.2)
+ax.set_xlabel(r"$\alpha_\mathcal{E}$", fontsize=LABEL_SIZE)
+ax.set_ylabel("AUC (/%)", fontsize=LABEL_SIZE)
 
-fontsize = 16
-ax.set_xlabel(r"$\alpha$", fontsize=fontsize)
-ax.set_ylabel("AUC (/%)", fontsize=fontsize)
-ax.set_xticks(sorted(set(alphas)))
-ax.set_yticks(np.arange(0, 110, 10))
-ax.tick_params(axis='both', labelsize=fontsize)
-ax.legend(fontsize=13, loc="lower left", frameon=False, ncol=1)
+ax.set_xticks(new_alpha)
+ax.set_yticks(np.arange(0, 110, 20))
+ax.tick_params(axis='both', labelsize=TICK_SIZE)
+ax.legend(fontsize=LEGEND_SIZE, loc="lower left", frameon=False, ncol=1)
 plt.tight_layout()
 plt.savefig("Tri_SYN_Real2_ALL.pdf", bbox_inches='tight')
 plt.show()

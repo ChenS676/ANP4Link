@@ -53,6 +53,15 @@ raw_data = [
      [0.03, 0.03, 0.07, 0.0, 0.05, 0.04, 0.03, 0.07, 0.08]),
 ]
 
+TITLE_SIZE = 26
+LABEL_SIZE = 35
+TICK_SIZE = 35
+LEGEND_SIZE = 15
+LEGEND_TITLE_SIZE = 24
+ANNOTATION_SIZE = 24
+FIGSIZE = (10, 8)
+DPI = 300
+
 import seaborn as sns
 models = ["GCN", "GAT", "GIN", "GraphSAGE", "MixHopGCN", "ChebGCN", "LINKX"]
 set3_colors = sns.color_palette("Set3", len(models))
@@ -103,13 +112,13 @@ for idx, (model, values) in enumerate(interpolated_data.items()):
     
 fontsize = 22
 # Formatting the plot
-ax.set_xlabel(r"$\alpha$", fontsize=fontsize)
-ax.set_ylabel("AUC (/%)", fontsize=fontsize)
+ax.set_xlabel(r"$\alpha_{\mathcal{V}}$", fontsize=LABEL_SIZE)
+ax.set_ylabel("AUC (/%)", fontsize=LABEL_SIZE)
 ax.set_xticks(new_alpha)
 ax.set_yticks(np.arange(60, 101, 10))
-ax.tick_params(axis='both', labelsize=fontsize) 
+ax.tick_params(axis='both', labelsize=TICK_SIZE)
 fontsize = 16
-ax.legend(fontsize=fontsize, loc="lower left")
+ax.legend(fontsize=LEGEND_SIZE, loc="lower left")
 plt.tight_layout()
 
-plt.savefig('Cora_SYN_Real.pdf')
+plt.savefig('Cora_SYN_Real_AUC.pdf')
