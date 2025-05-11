@@ -135,7 +135,7 @@ interpolated_data = defaultdict(dict)
 TITLE_SIZE = 26
 LABEL_SIZE = 35
 TICK_SIZE = 35
-LEGEND_SIZE = 18
+LEGEND_SIZE = 14
 LEGEND_TITLE_SIZE = 24
 ANNOTATION_SIZE = 24
 FIGSIZE = (10, 8)
@@ -187,9 +187,9 @@ for idx, (model, values) in enumerate(interpolated_data.items()):
         values["alpha"],
         values["best_valid"],
         yerr=values["variance"],
-        fmt='o',  # Markers only for error bars
+        fmt='o',
         color=color,
-        alpha=0.3,  # Reduced transparency for error bars
+        alpha=0.3, 
         capsize=6,
         elinewidth=2,
         capthick=2
@@ -199,8 +199,8 @@ for idx, (model, values) in enumerate(interpolated_data.items()):
 legend = ax.legend(
     fontsize=LEGEND_SIZE,
     loc="upper right",
-    bbox_to_anchor=(0.95, 1),  # 从 (1,1) 调到 (0.95,1)，稍微往左
-    ncol=3,
+    bbox_to_anchor=(0.95, 1),
+    ncol=2,
     frameon=True,
     framealpha=0.5,
     fancybox=True
