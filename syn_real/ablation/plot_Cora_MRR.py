@@ -5,10 +5,10 @@ from collections import defaultdict
 
 
 raw_cora_mrr_data = [
-    ("GCN",
-     [0.81, 0.7, 0.63, 0.49, 0.4, 0.29, 0.19, 0.17, 0.1],
-     [42.28, 34.09, 27.06, 21.29, 20.83, 18.37, 16.5, 14.78, 12.82],
-     [11.15, 8.75, 5.83, 6.17, 3.29, 3.9, 3.5, 4.48, 3.91]),
+    # ("GCN",
+    #  [0.81, 0.7, 0.63, 0.49, 0.4, 0.29, 0.19, 0.17, 0.1],
+    #  [42.28, 34.09, 27.06, 21.29, 20.83, 18.37, 16.5, 14.78, 12.82],
+    #  [11.15, 8.75, 5.83, 6.17, 3.29, 3.9, 3.5, 4.48, 3.91]),
     
     # ("GAT",
     #  [0.81, 0.7, 0.63, 0.49, 0.4, 0.29, 0.19, 0.17, 0.1],
@@ -147,11 +147,13 @@ legend = ax.legend(
     fancybox=True
 )
 legend.get_frame().set_facecolor('white')
-
+new_alpha = np.arange(0.1, 1.0, 0.2)
 ax.set_xlabel(r"$\alpha_{\mathcal{V}}$", fontsize=LABEL_SIZE)
 ax.set_ylabel("MRR (/%)", fontsize=LABEL_SIZE)
 ax.set_xticks(new_alpha)
+
 ax.set_yticks(np.arange(0, 101, 20))
+ax.set_ylim(31, 100) 
 ax.tick_params(axis='both', labelsize=TICK_SIZE)
 
 plt.tight_layout()

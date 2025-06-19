@@ -16,20 +16,7 @@ from torch_geometric.datasets import Planetoid
 from torch_geometric.utils import (
     to_networkx
 )
-from automorphism import run_wl_test_and_group_nodes, compute_automorphism_metrics
-from baselines.gnn_utils import (GCN, 
-                                 GAT, 
-                                 SAGE, 
-                                 GIN, 
-                                 MF, 
-                                 DGCNN, 
-                                 GCN_seal, 
-                                 SAGE_seal, 
-                                 DecoupleSEAL, 
-                                 mlp_score, 
-                                 dot_product, 
-                                 ChebGCN, 
-                                 MixHopGCN)
+from automorphism import compute_automorphism_metrics,  WLConvOptimized
 from syn_real.gnn_utils  import evaluate_hits, evaluate_auc, evaluate_mrr
 from syn_real.gnn_utils import (
     get_root_dir, 
@@ -38,7 +25,6 @@ from syn_real.gnn_utils import (
     Logger, 
     init_seed
 )
-import matplotlib.pyplot as plt
 import networkx as nx
 import pandas as pd
 from gnn_ogb_heart import init_seed
@@ -137,6 +123,36 @@ def remove_random_edges(graph_data, inter_ratio=0.5, intra_ratio=0.5, total_edge
 
 
 
+def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
+    """
+    Runs the Weisfeiler-Lehman (WL) test and groups nodes with similar hashed labels.
+    
+    Args:
+        edge_index (Tensor): The edge index tensor (2, |E|) representing the graph.
+        num_nodes (int): The number of nodes in the graph.
+        num_iterations (int): Number of WL iterations.
+    
+    Returns:
+        node_groups (dict): Mapping from WL hashes to node sets.
+        node_labels (Tensor): Final hashed labels for each node.
+    """
+    # wl = WLConvMultiFeature()  # Initialize the WL hashing layer
+    wl = WLConvOptimized()  # Optimized version for multi-dimensional features
+
+    node_labels = np.ones(num_nodes)
+    for _ in range(num_iterations):
+        node_labels = wl(node_labels, edge_index)  
+    # Group nodes based on final hashed values
+    node_groups = {}
+    for node, label in enumerate(node_labels.tolist()):
+        if label not in node_groups:
+            node_groups[label] = []
+        node_groups[label].append(node)
+    unique_labels, new_labels = torch.unique(node_labels, return_inverse=True)
+    # node_groups = relabel_group_dict_to_label_mapping(node_groups)
+    return node_groups, node_labels, new_labels
+
+
 
 def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     """
@@ -152,8 +168,8 @@ def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     # Add random edges to the graph
     new_edges = 0
     if inter_ratio != 0 and intra_ratio != 0 and total_edges != 0:
-        # updated_graph_data, new_edges = add_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
-        updated_graph_data, new_edges = remove_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
+        updated_graph_data, new_edges = add_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
+        # updated_graph_data, new_edges = remove_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
         print(new_edges)
     else:
         updated_graph_data = graph_data
@@ -161,7 +177,9 @@ def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     G = to_networkx(updated_graph_data, to_undirected=True)
     num_nodes = updated_graph_data.num_nodes
     # print degree distribution 
-    node_groups, node_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, num_nodes=num_nodes, num_iterations=30)
+    node_groups, hash_feat, node_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, num_nodes=num_nodes, num_iterations=30)
+    
+    # TODO visualize the orbit distribution 
     metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
     metrics_after.update({'head': f'{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}'})
     csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
@@ -254,100 +272,7 @@ def add_random_edges(graph_data, inter_ratio=0.5, intra_ratio=0.5, total_edges=1
     return Data(edge_index=updated_edge_index, num_nodes=graph_data.num_nodes, x=graph_data.x)
 
 
-def plot_group_size_distribution(group_sizes, args, file_name):
-    """ 
-    Plots the group size distribution with log-log scaling.
-    
-    Parameters:
-        group_sizes (list): Sizes of automorphism groups.
-        args (argparse.Namespace): Arguments containing dataset name.
-    """
-    # Not readable
-    # plt.figure()
-    # plt.plot(group_sizes)
-    # plt.xscale('log')
-    # plt.yscale('log')
-    # plt.xlabel("Group Index (log scale)")
-    # plt.ylabel("Group Size (log scale)")
-    # plt.title("Group Size Distribution (Log-Log Scale)")
-    # plt.savefig(f'plots/{args.data_name}/group_size_{args.data_name}.png')
-    # plt.close()
 
-    plt.figure()
-    plt.plot(np.log1p(group_sizes))
-    plt.xlabel("Group Index (log scale)")
-    plt.ylabel("Group Size (log scale)")
-    plt.title("Group Size Distribution (Log-Log Scale)")
-    plt.savefig(file_name)
-    plt.close()
-    
-
-def plot_histogram_group_size(group_sizes, metrics_before, args):
-    """ 
-    Plots a histogram of group sizes.
-    
-    Parameters:
-        group_sizes (list): Sizes of automorphism groups.
-        metrics_before (dict): Dictionary containing WL test metrics.
-        args (argparse.Namespace): Arguments containing dataset name.
-    """
-    plot_dir = f'plots/{args.data_name}'
-    os.makedirs(plot_dir, exist_ok=True)
-    plt.figure(figsize=(6, 4))
-    counts, bins, _ = plt.hist(group_sizes, bins=20, edgecolor='black', alpha=0.75, density=True)
-    counts = counts * 100 * np.diff(bins)
-    plt.bar(bins[:-1], counts, width=np.diff(bins), edgecolor='black', alpha=0.75)
-    plt.xlabel("Group Size")
-    plt.ylabel("Frequency")
-    plt.title(f"Histogram of Group Sizes {metrics_before['A_r_norm_1']}")
-    save_path = f'{plot_dir}/hist_group_size_{args.data_name}.png'
-    plt.savefig(save_path)
-    plt.close()
-    # print(f"Saved to {save_path}")
-    # print(f"Automorphism fraction before adding random edges: {metrics_before}")
-
-
-
-def plot_graph_visualization(graph_data, node_labels, args, save_path):
-    """ 
-    Plots a general visualization of the graph using WL-based node coloring.
-    
-    Parameters:
-        graph_data (torch_geometric.data.Data): The input graph data.
-        node_labels (list or array): Node labels for coloring.
-        args (argparse.Namespace): Arguments containing dataset name.
-    """
-    plt.figure(figsize=(6, 6))
-    G = to_networkx(graph_data, to_undirected=True)
-    nx.draw(G, node_size=10, font_size=8, cmap='Set1', node_color=node_labels, edge_color="gray")
-    plt.title("Graph Visualization with WL-based Node Coloring")
-    plt.savefig(save_path)
-    plt.close()
-
-
-def plot_histogram_group_size_log_scale(group_sizes, metrics_before, args, save_path):
-    """ 
-    Plots a histogram of group sizes with log scale on both axes.
-    
-    Parameters:
-        group_sizes (list): Sizes of automorphism groups.
-        metrics_before (dict): Dictionary containing WL test metrics.
-        args (argparse.Namespace): Arguments containing dataset name.
-    """
-
-    plt.figure(figsize=(6, 4))
-    counts, bins, _ = plt.hist(group_sizes, bins=20, edgecolor='black', alpha=0.75, density=True)
-    counts = counts * 100 * np.diff(bins)
-    plt.bar(bins[:-1], counts, width=np.diff(bins), edgecolor='black', alpha=0.75)
-    plt.yscale('log') 
-    plt.xlabel("Group Size (log scale)")
-    plt.ylabel("Frequency (log scale)")
-    plt.title(f"Histogram of Group Sizes {metrics_before['A_r_norm_1']}")
-    plt.savefig(save_path)
-    plt.close()
-    print(f"Saved to {save_path}")
-    print(f"Automorphism fraction before adding random edges: {metrics_before}")
-    
     
 def parse_args():
     parser = argparse.ArgumentParser(description='homo')

@@ -7,6 +7,8 @@ from enum import Enum
 
 import networkx as nx
 import numpy as np
+import matplotlib.pyplot as plt
+import math
 
 """
     Generates random graphs of different types of a given size.
@@ -64,6 +66,65 @@ def triangular(N):
         if N % i == 0:
             m = i
     return nx.triangular_lattice_graph(m, N // m)
+
+# def plot_triangular_graph(G):
+    
+
+#     pos = {node: node for node in G.nodes()}  # positions match (i, j) coords
+#     node_labels = {node: f"{node}" for node in G.nodes()}
+#     node_colors = range(len(G.nodes()))  # assign each node a unique color
+
+#     plt.figure(figsize=(8, 6))
+#     nx.draw(
+#         G,
+#         pos=pos,
+#         with_labels=True,
+#         labels=node_labels,
+#         node_color=node_colors,
+#         cmap='viridis',
+#         node_size=500,
+#         edge_color='gray',
+#         edgecolors='black',
+#         font_size=8
+#     )
+#     plt.title(f"Triangular Lattice Graph")
+#     plt.axis('equal')
+#     plt.tight_layout()
+#     plt.savefig("triangular_lattice_graph.png", dpi=300)
+#     plt.show()
+    
+    
+
+def plot_triangular_graph(G, orbits, custom_labels=None, figsize=(8, 6), cmap='tab20b'):
+    """
+    Plots a triangular lattice graph with node coloring based on orbit labels.
+
+    Parameters:
+        G (nx.Graph): The triangular lattice graph to plot.
+        orbits (list or dict): Orbit label for each node.
+        custom_labels (dict, optional): Custom labels for nodes.
+        figsize (tuple): Size of the figure.
+        cmap (str): Matplotlib colormap name.
+    """
+
+    plt.figure(figsize=(6, 6))
+    nx.draw(
+        G,
+        node_color=orbits, 
+        with_labels=True,
+        labels=custom_labels,
+        node_size=1500,       # Increase node size (default is ~300–600)
+        edgecolors='black',
+        font_weight='bold',
+        font_size=14           # Increase font size
+    )
+
+    plt.title("Graph Colored by Float Values", fontsize=16)  # Optional: bigger title
+    plt.axis('equal')
+    plt.tight_layout()
+    plt.savefig('graph_by_float.pdf')
+    plt.close()
+
 
 def hexagonal(N):
     """ Creates a m x k 2d grid hexagonal graph with N = m*k and m and k as close as possible """

@@ -329,14 +329,7 @@ def init_regular_tilling(N, type=RegularTilling.SQUARE_GRID, seed=None):
     elif type == RegularTilling.KAGOME_LATTICE:
         G, pos = kagome_lattice(N, N, seed)
 
-    # generate adjacency matrix and nodes values
-    nodes = list(G)
-    random.shuffle(nodes)
-    adj_matrix = nx.to_scipy_sparse_array(G, nodes)
-    plt.figure(figsize=(12, 6))
-    nx.draw(G, pos, node_size=20, font_size=10)
-    plt.title("Original Kagome Lattice")
-    plt.savefig('draw.png')
+    adj_matrix = nx.to_scipy_sparse_array(G, list(G))
     return G, adj_matrix, type, pos
 
 

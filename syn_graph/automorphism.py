@@ -748,7 +748,7 @@ def test_automorphism():
 
     G, num_nodes, edge_index = dataloader(args)
     node_groups, node_labels = run_wl_test_and_group_nodes(edge_index, num_nodes=num_nodes, num_iterations=100)
-    torch.save(node_labels, f"{args.data_name}_wl_labels.pt")
+    # torch.save(node_labels, f"{args.data_name}_wl_labels.pt")
 
     metrics, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
     # plt.figure()
