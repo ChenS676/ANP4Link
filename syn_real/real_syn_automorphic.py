@@ -198,7 +198,7 @@ def load_real_world_graph(dataset_name="Cora"):
 
 
 # --- 2️⃣ Create Disjoint Graph Copies & Merge ---
-def create_disjoint_graph(data):
+def create_disjoint_graph(data: Data) -> Data:
     """
     Creates two disjoint copies of a real-world graph (e.g., Cora).
     Args:

@@ -24,7 +24,7 @@ from torch_geometric.utils import (
     to_edge_index,
     from_networkx
 )
-
+from collections import defaultdict
 import matplotlib.pyplot as plt
 from torch_geometric.datasets import Planetoid, Amazon
 from torch_geometric.utils import train_test_split_edges, to_undirected
@@ -32,14 +32,11 @@ import random
 from networkx import random_regular_graph
 from syn_graph.graph_generation import GraphType 
 from syn_graph.syn_random import RegularTilling
-import torch
 from collections import Counter
 from syn_graph.syn_random import init_regular_tilling
-from syn_graph.graph_generation import generate_graph, plot_triangular_graph
-import matplotlib.pyplot as plt
-import networkx as nx
-from syn_real.custom_wl import WLConvOptimized, WLConvMultiFeature, WLConvMultiFeature, WLConvOptimized
-
+from syn_graph.graph_generation import (generate_graph, 
+                                        plot_triangular_graph)
+from syn_real.custom_wl import WLConvOptimized
 
 # %%
 
@@ -68,7 +65,7 @@ def plot_graph_with_orbits(G, pos, orbits, custom_labels=None, figsize=(8, 6), c
         edgecolors='black'
     )
     plt.title("Graph Colored by Orbit Labels")
-    plt.show()
+    plt.savefig('test.pdf', bbox_inches='tight')
     plt.close()
 
 
@@ -132,9 +129,6 @@ def compute_automorphism_metrics(node_groups, num_nodes):
 
 
 # %%
-from syn_real.custom_wl import WLConvOptimized, WLConvMultiFeature, WLConvMultiFeature, WLConvOptimized
-
-
 def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
     """
     Runs the Weisfeiler-Lehman (WL) test and groups nodes with similar hashed labels.
@@ -148,7 +142,6 @@ def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
         node_groups (dict): Mapping from WL hashes to node sets.
         node_labels (Tensor): Final hashed labels for each node.
     """
-    # wl = WLConvMultiFeature()  
     wl = WLConvOptimized()  
 
     node_labels = np.ones(num_nodes)
@@ -164,7 +157,7 @@ def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
     return node_groups, node_labels, new_labels
 
 
-from collections import defaultdict
+
 
 def count_orbit_edges(G, node_groups):
     # Create a mapping: node -> orbit_id
@@ -205,7 +198,7 @@ def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
     data = from_networkx(G)
     edge_index = data.edge_index
     node_groups, node_labels, orbits = run_wl_test_and_group_nodes(edge_index, num_nodes=G.number_of_nodes(), num_iterations=100)
-    metrics, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, G.number_of_nodes())
+    _, _, _ = compute_automorphism_metrics(node_groups, G.number_of_nodes())
     count_orbit_edges(G, node_labels)
     
     try:
@@ -219,47 +212,48 @@ def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
     except:
         # Visualiz  e with WL-based coloring
         plot_triangular_graph(G, orbits, custom_labels=node_labels, figsize=(8, 6), cmap='tab20b')
-    # save_metrics(metrics, f"{graph_type}_{N}", csv_path='summary.csv')
+        plot_orbit_dist(node_groups)
+        plot_orbit(orbits)
+    # save_metrics(metrics, f"{graph_type}_{N}", csv_path='summary.csv'
 
-# %%
-process_graph(10, GraphType.BARABASI_ALBERT)
-
-
-# %%
-process_graph(20, GraphType.BARABASI_ALBERT)
-
-
-# %%
-process_graph(40, GraphType.BARABASI_ALBERT)
+if __name__ == "__main__":    
+    # %%
+    process_graph(10, GraphType.BARABASI_ALBERT)
 
 
-# %%
-process_graph(60, GraphType.BARABASI_ALBERT)
+    # %%
+    process_graph(20, GraphType.BARABASI_ALBERT)
 
 
-# %%
-process_graph(34, GraphType.TREE)
+    # %%
+    process_graph(40, GraphType.BARABASI_ALBERT)
 
 
-# %%
-process_graph(10, GraphType.TREE)
+    # %%
+    process_graph(60, GraphType.BARABASI_ALBERT)
 
 
-# %%
-process_graph(10, RegularTilling.SQUARE_GRID)
+    # %%
+    process_graph(34, GraphType.TREE)
+
+    # %%
+    process_graph(10, GraphType.TREE)
+
+    # %%
+    process_graph(10, RegularTilling.SQUARE_GRID)
 
 
-process_graph(20, RegularTilling.SQUARE_GRID)
+    process_graph(20, RegularTilling.SQUARE_GRID)
 
 
-process_graph(80, RegularTilling.SQUARE_GRID)
+    process_graph(80, RegularTilling.SQUARE_GRID)
 
 
-process_graph(10, GraphType.TRIANGULAR)
+    process_graph(10, GraphType.TRIANGULAR)
 
 
-process_graph(20, GraphType.TRIANGULAR)
+    process_graph(20, GraphType.TRIANGULAR)
 
 
-process_graph(30, GraphType.TRIANGULAR)
+    process_graph(30, GraphType.TRIANGULAR)
 
