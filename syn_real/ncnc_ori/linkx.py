@@ -43,7 +43,7 @@ from syn_real.gnn_utils import (
     init_seed
 )
 from baselines.gnn_utils import save_emb 
-from syn_real_generator import (
+from syn_real.ncnc_ori.syn_real_generator import (
     extract_induced_subgraph,
     use_lcc,
     perturb_disjoint,

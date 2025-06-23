@@ -62,7 +62,8 @@ from baselines.gnn_utils import (get_root_dir,
 from graphgps.utility.utils import mvari_str2csv
 from syn_real.gnn_ogb_heart import init_seed
 from syn_real.automorphism import (run_wl_test_and_group_nodes, 
-                          compute_automorphism_metrics)
+                                   count_automorphic_edges, 
+                                   compute_automorphism_metrics)
 
 
 # python real_syn_automorphic.py --data_name Citeseer --gnn_model GCN --lr 0.01 --dropout 0.3 --l2 1e-4 --num_layers 1 --num_layers_predictor 3 --hidden_channels 128 --epochs 9999 --kill_cnt 10 --eval_steps 5 --batch_size 1024 
@@ -145,7 +146,7 @@ def remove_random_edges(graph_data, inter_ratio=0.5, intra_ratio=0.5, total_edge
     return Data(edge_index=updated_edge_index, num_nodes=graph_data.num_nodes, x=graph_data.x), removed_edges
 
 
-
+    
 
 def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     """
@@ -159,31 +160,29 @@ def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
         total_edges (int): Total number of random edges to add.
     """
     # Add random edges to the graph
-    new_edges = 0
     if inter_ratio != 0 and intra_ratio != 0 and total_edges != 0:
-        updated_graph_data, new_edges = add_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
-        # updated_graph_data, new_edges = remove_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
-        print(new_edges)
+        updated_graph_data = add_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
     else:
         updated_graph_data = graph_data
     # Convert to NetworkX graph for visualization
     G = to_networkx(updated_graph_data, to_undirected=True)
     num_nodes = updated_graph_data.num_nodes
     # print degree distribution 
-    node_groups, node_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, num_nodes=num_nodes, num_iterations=30)
-    metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
-    metrics_after.update({'head': f'{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}'})
-    csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
-    file_exists = os.path.isfile(csv_path)
-    df = pd.DataFrame([metrics_after])
-    df.to_csv(csv_path, mode='a', index=False, header=not file_exists)
-    print(df)
+    node_groups, node_labels, new_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, num_nodes=num_nodes, num_iterations=30)
+    intra_orbit_edges, inter_orbit_edges = count_automorphic_edges(G, node_labels)
+    # metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
+    # metrics_after.update({'head': f'{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}'})
+    # csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
+    # file_exists = os.path.isfile(csv_path)
+    # df = pd.DataFrame([metrics_after])
+    # df.to_csv(csv_path, mode='a', index=False, header=not file_exists)
+    # print(df)
     
     # plot_group_size_distribution(group_sizes, args, f'plots/{args.data_name}/group_size_log1p{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
     # plot_histogram_group_size_log_scale(group_sizes, metrics_after, args, f'plots/{args.data_name}/hist_group_size_log_{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
     # plot_graph_visualization(updated_graph_data, node_labels, args,  f'plots/{args.data_name}/wl_test_{args.data_name}_vis_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
     print(f"Finished with inter_ratio={inter_ratio}, intra_ratio={intra_ratio}, total_edges={total_edges}")
-    return updated_graph_data, metrics_after# , node_groups, node_labels, new_edges
+    return updated_graph_data#, metrics_after , node_groups, node_labels, new_edges
 
     
     
@@ -783,8 +782,8 @@ def main():
     perturb_disjoint(original_data, args, 0, 0, 0)
     
     disjoint_graph = create_disjoint_graph(original_data)
-    disjoint_graph, metrics = perturb_disjoint(disjoint_graph, args, 0, 0, 0)
-    run_training_pipeline(disjoint_graph, metrics, 0, 0, 0, args)
+    disjoint_graph = perturb_disjoint(disjoint_graph, args, 0, 0, 0)
+    # run_training_pipeline(disjoint_graph, metrics, 0, 0, 0, args)
     
     if args.data_name == 'Cora':
         # Cora
@@ -811,8 +810,8 @@ def main():
         for intra in intra_ratios:
             for edge_factor in total_edges_list:
                 total_edges = int(edge_factor * multi_factor)
-                data, metrics = perturb_disjoint(disjoint_graph, args, inter, intra, total_edges)
-                run_training_pipeline(data, metrics, inter, intra, total_edges, args)
+                data = perturb_disjoint(disjoint_graph, args, inter, intra, total_edges)
+                # run_training_pipeline(data, metrics, inter, intra, total_edges, args)
 
 if __name__ == "__main__":
     main()
