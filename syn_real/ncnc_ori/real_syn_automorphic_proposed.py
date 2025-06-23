@@ -33,7 +33,7 @@ import wandb
 from graphgps.utility.utils import mvari_str2csv
 from baselines.gnn_utils import get_root_dir, get_logger, get_config_dir, Logger, init_seed, save_emb
 from utils import PermIterator
-from gnn_ogb_heart import init_seed
+from syn_real.gnn_ogb_heart import init_seed
 from automorphism import run_wl_test_and_group_nodes, compute_automorphism_metrics
 from syn_real.gnn_utils  import evaluate_hits, evaluate_auc, evaluate_mrr
 from syn_real.gnn_utils import (

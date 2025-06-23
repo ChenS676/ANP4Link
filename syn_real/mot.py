@@ -65,7 +65,7 @@ def plot_graph_with_orbits(G, pos, orbits, custom_labels=None, figsize=(8, 6), c
         edgecolors='black'
     )
     plt.title("Graph Colored by Orbit Labels")
-    plt.savefig('test.pdf', bbox_inches='tight')
+    plt.show()
     plt.close()
 
 
@@ -98,7 +98,7 @@ def plot_orbit(orbits):
 
 # %%
 
-def compute_automorphism_metrics(node_groups, num_nodes):
+def compute_automorphism_metrics(orbits, num_nodes):
     """
     Computes numerical metrics for graph automorphism based on WL node grouping.
     Args:
@@ -109,6 +109,12 @@ def compute_automorphism_metrics(node_groups, num_nodes):
         dict: Automorphism metrics {A_r1, C_auto, H_auto}
     """
     # Compute the size of each group (how many nodes share the same WL label)
+    node_groups = {}
+    for node, label in enumerate(orbits):
+        if label not in node_groups:
+            node_groups[label] = []
+        node_groups[label].append(node)
+        
     group_sizes = np.array([len(group) for group in node_groups.values()])
 
     A_r1 = np.sum(group_sizes**2) / num_nodes**2
@@ -215,6 +221,7 @@ def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
         plot_orbit_dist(node_groups)
         plot_orbit(orbits)
     # save_metrics(metrics, f"{graph_type}_{N}", csv_path='summary.csv'
+
 
 if __name__ == "__main__":    
     # %%

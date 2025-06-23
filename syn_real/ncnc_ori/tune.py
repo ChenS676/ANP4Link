@@ -41,7 +41,7 @@ from syn_real.gnn_utils import (
 import matplotlib.pyplot as plt
 import networkx as nx
 
-from gnn_ogb_heart import init_seed
+from syn_real.gnn_ogb_heart import init_seed
 from torch_geometric.utils import train_test_split_edges, to_undirected
 import copy
 import torch

@@ -16,7 +16,7 @@ from torch_geometric.datasets import Planetoid
 from torch_geometric.utils import (
     to_networkx
 )
-from automorphism import run_wl_test_and_group_nodes, compute_automorphism_metrics
+
 from baselines.gnn_utils import (GCN, 
                                  GAT, 
                                  SAGE, 
@@ -30,6 +30,21 @@ from baselines.gnn_utils import (GCN,
                                  dot_product, 
                                  ChebGCN, 
                                  MixHopGCN)
+
+import matplotlib.pyplot as plt
+import networkx as nx
+import pandas as pd
+from torch_geometric.utils import train_test_split_edges, to_undirected
+import copy
+import torch
+import argparse
+from torch_sparse import SparseTensor
+from torch_geometric.datasets import Planetoid 
+from ogb.linkproppred import Evaluator, PygLinkPropPredDataset
+from torch.utils.data import DataLoader
+import wandb
+
+
 from syn_real.gnn_utils  import evaluate_hits, evaluate_auc, evaluate_mrr
 from syn_real.gnn_utils import (
     get_root_dir, 
@@ -38,22 +53,16 @@ from syn_real.gnn_utils import (
     Logger, 
     init_seed
 )
-import matplotlib.pyplot as plt
-import networkx as nx
-import pandas as pd
-from gnn_ogb_heart import init_seed
-from torch_geometric.utils import train_test_split_edges, to_undirected
-import copy
-import torch
-import argparse
-from baselines.gnn_utils import get_root_dir, get_logger, get_config_dir, Logger, init_seed, save_emb
-from torch_sparse import SparseTensor
-
-from torch_geometric.datasets import Planetoid 
-from ogb.linkproppred import Evaluator, PygLinkPropPredDataset
+from baselines.gnn_utils import (get_root_dir, 
+                                 get_logger, 
+                                 get_config_dir, 
+                                 Logger, 
+                                 init_seed, 
+                                 save_emb)
 from graphgps.utility.utils import mvari_str2csv
-from torch.utils.data import DataLoader
-import wandb
+from syn_real.gnn_ogb_heart import init_seed
+from syn_real.automorphism import (run_wl_test_and_group_nodes, 
+                          compute_automorphism_metrics)
 
 
 # python real_syn_automorphic.py --data_name Citeseer --gnn_model GCN --lr 0.01 --dropout 0.3 --l2 1e-4 --num_layers 1 --num_layers_predictor 3 --hidden_channels 128 --epochs 9999 --kill_cnt 10 --eval_steps 5 --batch_size 1024 
@@ -152,8 +161,8 @@ def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     # Add random edges to the graph
     new_edges = 0
     if inter_ratio != 0 and intra_ratio != 0 and total_edges != 0:
-        # updated_graph_data, new_edges = add_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
-        updated_graph_data, new_edges = remove_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
+        updated_graph_data, new_edges = add_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
+        # updated_graph_data, new_edges = remove_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
         print(new_edges)
     else:
         updated_graph_data = graph_data
@@ -222,7 +231,10 @@ def create_disjoint_graph(data: Data) -> Data:
 
 
 # --- 3️⃣ Add Controllable Random Edges ---
-def add_random_edges(graph_data, inter_ratio=0.5, intra_ratio=0.5, total_edges=1000):
+def add_random_edges(graph_data, 
+                     inter_ratio=0.5, 
+                     intra_ratio=0.5, 
+                     total_edges=1000):
     """
     Adds random edges between and within two graph copies in a controlled way.
 

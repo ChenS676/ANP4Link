@@ -91,7 +91,7 @@ def plot_triangular_graph(G, orbits, custom_labels=None, figsize=(8, 6), cmap='B
         # node_color=orbits, 
         with_labels=True,
         labels=labels,
-        node_size=1500,       # Increase node size (default is ~300–600)
+        node_size=1500,      
         edgecolors='black',
         font_weight='bold',
         font_size=14          
