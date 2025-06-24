@@ -207,7 +207,7 @@ def load_real_world_graph(dataset_name="Cora"):
     # Extract k-hop subgraph
     subset, sub_edge_index, mapping, edge_mask = k_hop_subgraph(
         node_idx=0,
-        num_hops=3,
+        num_hops=5,
         edge_index=data.edge_index,
         relabel_nodes=True,
         num_nodes=data.num_nodes
@@ -218,6 +218,7 @@ def load_real_world_graph(dataset_name="Cora"):
     sub_y = data.y[subset]
 
     return Data(x=sub_x, edge_index=sub_edge_index, y=sub_y)
+
 
 
 # --- 2️⃣ Create Disjoint Graph Copies & Merge ---
