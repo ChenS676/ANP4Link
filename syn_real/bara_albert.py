@@ -791,10 +791,8 @@ def main():
         G = generate_graph(N, GraphType.BARABASI_ALBERT, seed=0)
         graph = from_networkx(G)
         
-        from syn_real.disjoint_syn import get_graph_orbits
-        get_graph_orbits(graph.edge_index, graph.num_nodes, num_iterations=30)
-        orbits, num_orbit = get_graph_orbits(G)
-        # print(f"Number of orbits: {num_orbit}")
+        _, _, orbits = run_wl_test_and_group_nodes(graph.edge_index, num_nodes=graph.num_nodes, num_iterations=100)
+        print(f"Number of orbits: {len(orbits)}")
 
         custom_labels = {}
         for i, ov in zip(G.nodes(), orbits):
@@ -802,7 +800,7 @@ def main():
 
         count_automorphic_edges(G, orbits)
         
-        metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
+        # metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
         # run_training_pipeline(graph, {}, 0, 0, 0, args)
 
 if __name__ == "__main__":
