@@ -787,10 +787,10 @@ def main():
         for i, ov in zip(G.nodes(), orbits):
                 custom_labels[i] = f"{ov}"
 
-        count_automorphic_edges(G, orbits)
+        # count_automorphic_edges(G, orbits)
         
         # metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
-        # run_training_pipeline(graph, {}, 0, 0, 0, args)
+        run_training_pipeline(graph, {}, 0, 0, 0, args)
 
 if __name__ == "__main__":
     main()
