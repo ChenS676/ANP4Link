@@ -16,7 +16,7 @@ from torch_geometric.datasets import Planetoid
 from torch_geometric.utils import (
     to_networkx
 )
-
+from syn_graph.graph_generation import GraphType, generate_graph
 from baselines.gnn_utils import (GCN, 
                                  GAT, 
                                  SAGE, 
@@ -53,6 +53,18 @@ from syn_real.gnn_utils import (
     Logger, 
     init_seed
 )
+from torch_geometric.utils import (
+    degree,
+    is_sparse,
+    scatter,
+    sort_edge_index,
+    to_edge_index,
+    from_networkx,
+    to_networkx,
+    train_test_split_edges,
+    to_undirected
+)
+from syn_graph.graph_generation import generate_graph, GraphType
 from baselines.gnn_utils import (get_root_dir, 
                                  get_logger, 
                                  get_config_dir, 
@@ -170,7 +182,7 @@ def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     # print degree distribution 
     node_groups, node_labels, new_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, num_nodes=num_nodes, num_iterations=30)
     intra_orbit_edges, inter_orbit_edges = count_automorphic_edges(G, node_labels)
-    # metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
+    metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
     # metrics_after.update({'head': f'{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}'})
     # csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
     # file_exists = os.path.isfile(csv_path)
@@ -182,27 +194,10 @@ def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     # plot_histogram_group_size_log_scale(group_sizes, metrics_after, args, f'plots/{args.data_name}/hist_group_size_log_{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
     # plot_graph_visualization(updated_graph_data, node_labels, args,  f'plots/{args.data_name}/wl_test_{args.data_name}_vis_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
     print(f"Finished with inter_ratio={inter_ratio}, intra_ratio={intra_ratio}, total_edges={total_edges}")
-    return updated_graph_data#, metrics_after , node_groups, node_labels, new_edges
+    return updated_graph_data, metrics_after# , node_groups, node_labels, new_edges
 
     
-    
-# --- 1️⃣ Load Real-World Graph (Cora) ---
-def load_real_world_graph(dataset_name="Cora"):
-    """
-    Load a real-world graph dataset (e.g., Cora) from PyTorch Geometric.
-    Args:
-        dataset_name (str): The dataset name (default: "Cora").
-    Returns:
-        Data: PyTorch Geometric Data object.
-    """
-    if dataset_name in ['Cora', 'Citeseer', 'PubMed']:
-        dataset = Planetoid(root='/tmp/' + dataset_name, name=dataset_name)
-        data = dataset[0]  
-        # data.x = torch.eye(data.num_nodes, dtype=torch.float)
-        # data.x = torch.rand(data.num_nodes, data.num_nodes)
-    elif dataset_name.startswith('ogbl'):
-        pass
-    return data
+from torch_geometric.utils import k_hop_subgraph, to_networkx
 
 
 # --- 2️⃣ Create Disjoint Graph Copies & Merge ---
@@ -362,9 +357,9 @@ def plot_histogram_group_size_log_scale(group_sizes, metrics_before, args, save_
     
 def parse_args():
     parser = argparse.ArgumentParser(description='homo')
-    parser.add_argument('--data_name', type=str, default="Cora")
+    parser.add_argument('--data_name', type=str, default="bara_albert")
     parser.add_argument('--neg_mode', type=str, default='equal')
-    parser.add_argument('--gnn_model', type=str, default='GIN')
+    parser.add_argument('--gnn_model', type=str, default='GCN')
     parser.add_argument('--score_model', type=str, default='mlp_score')
     parser.add_argument('--pt_path', default=f"plots/Citeseer/processed_graph_inter0.5_intra0.5_edges1000_auto0.7200_norm1_0.7676.pt",
                         type=str)
@@ -450,7 +445,18 @@ def data2dict(data, splits, data_name) -> dict:
         datadict.update({'train_val': torch.cat([splits['valid']['edge'], splits['train']['edge']])})
         datadict.update({'x': data.x}) 
     else:
-        raise ValueError('data_name not supported')
+        print('data_name not supported')
+        #raise ValueError('data_name not supported')
+        datadict = {}
+        datadict.update({'adj': data.adj_t})
+        datadict.update({'train_pos': splits['train']['edge']})
+        # datadict.update({'train_neg': splits['train']['edge_neg']})
+        datadict.update({'valid_pos': splits['valid']['edge']})
+        datadict.update({'valid_neg': splits['valid']['edge_neg']})
+        datadict.update({'test_pos': splits['test']['edge']})
+        datadict.update({'test_neg': splits['test']['edge_neg']})   
+        datadict.update({'train_val': torch.cat([splits['valid']['edge'], splits['train']['edge']])})
+        datadict.update({'x': data.x}) 
     return datadict
 
 
@@ -626,6 +632,7 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
     data.adj_t = SparseTensor.from_edge_index(
         data.edge_index, sparse_sizes=(data.num_nodes, data.num_nodes)
     ).to_symmetric().coalesce()
+    data.x = torch.ones((data.num_nodes, 16), dtype=torch.float) if data.x is None else data.x
     split_edge = randomsplit(data)
     print("Dataset split:")
     for key1 in split_edge:
@@ -685,13 +692,13 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
 
     args.name_tag = (
         f'{args.data_name}_'
-        f'Orbits_{metrics["Number of Unique Groups (C_auto)"]:.2f}_'
-        f'ArScore_{metrics["automorphism_score"]:.2f}'
+        # f'Orbits_{metrics["Number of Unique Groups (C_auto)"]:.2f}_'
+        # f'ArScore_{metrics["automorphism_score"]:.2f}'
         f'{args.gnn_model}_'
         f'{args.score_model}_'
-        f'inter{inter:.2f}_'
-        f'intra{intra:.2f}_'
-        f'total{total_edges:.0f}_'
+        # f'inter{inter:.2f}_'
+        # f'intra{intra:.2f}_'
+        # f'total{total_edges:.0f}_'
     )
 
     # for batch_size, lr in itertools.product(hyperparams['batch_size'], hyperparams['lr']):
@@ -702,7 +709,7 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
         if args.wandb_log:
             wandb.init(
                 project=f"{args.data_name}_",
-                name=f"{args.data_name}_{args.batch_size}{args.lr}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
+                name=f"{args.data_name}_num{stats['Number of Nodes']}_{args.batch_size}_{args.lr}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
             )
             wandb.config.update(args)
         print(f'#################################          Run {run}          #################################')
@@ -778,40 +785,23 @@ def main():
 
     csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
     file_exists = os.path.isfile(csv_path)
-    original_data = load_real_world_graph(args.data_name)
-    perturb_disjoint(original_data, args, 0, 0, 0)
     
-    disjoint_graph = create_disjoint_graph(original_data)
-    disjoint_graph = perturb_disjoint(disjoint_graph, args, 0, 0, 0)
-    # run_training_pipeline(disjoint_graph, metrics, 0, 0, 0, args)
-    
-    if args.data_name == 'Cora':
-        # Cora
-        inter_ratios = [0.1]   
-        intra_ratios =  [0.5]
-        total_edges_list =  [0.2, 1, 4, 7, 12, 18, 20, 28] #  
-        multi_factor = 250
 
-    elif args.data_name == 'Citeseer':
-        # Citeseer
-        inter_ratios = [0.1] 
-        intra_ratios = [0.5] 
-        total_edges_list = [0.2, 1, 2, 3, 4, 5, 7, 8, 10, 14] #[0.2, 1, 2, 3, 4, 5, 7, 8, 10, 14]
-        multi_factor = 1000 
+    for N in range(100, 1001, 100):
+        G = generate_graph(N, GraphType.BARABASI_ALBERT, seed=0)
+        graph = from_networkx(G)
         
-    elif args.data_name == 'ogbl-ddi':
-        # DDI
-        inter_ratios = [0.5] 
-        intra_ratios = [0.5]    
-        total_edges_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # np.round(np.arange(0, 40, 2), 2).tolist()# [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] 
-        multi_factor = 1
+        _, _, orbits = run_wl_test_and_group_nodes(graph.edge_index, num_nodes=graph.num_nodes, num_iterations=100)
+        print(f"Number of orbits: {len(orbits)}")
+
+        custom_labels = {}
+        for i, ov in zip(G.nodes(), orbits):
+                custom_labels[i] = f"{ov}"
+
+        count_automorphic_edges(G, orbits)
         
-    for inter in inter_ratios:
-        for intra in intra_ratios:
-            for edge_factor in total_edges_list:
-                total_edges = int(edge_factor * multi_factor)
-                data = perturb_disjoint(disjoint_graph, args, inter, intra, total_edges)
-                # run_training_pipeline(data, metrics, inter, intra, total_edges, args)
+        # metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
+        # run_training_pipeline(graph, {}, 0, 0, 0, args)
 
 if __name__ == "__main__":
     main()

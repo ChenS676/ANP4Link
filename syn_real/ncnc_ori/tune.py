@@ -53,7 +53,7 @@ from torch_geometric.datasets import Planetoid
 from ogb.linkproppred import Evaluator, PygLinkPropPredDataset
 from graphgps.utility.utils import mvari_str2csv
 from torch.utils.data import DataLoader
-from syn_real_generator import extract_induced_subgraph, use_lcc, perturb_disjoint, generate_perturbed_graph
+from syn_real.ncnc_ori.syn_real_generator import extract_induced_subgraph, use_lcc, perturb_disjoint, generate_perturbed_graph
 import wandb
 
 

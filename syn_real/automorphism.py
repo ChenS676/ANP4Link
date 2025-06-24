@@ -23,6 +23,7 @@ from torch_geometric.utils import (
     to_edge_index,
     from_networkx
 )
+import itertools
 from ogb.linkproppred import PygLinkPropPredDataset
 from baselines.gnn_utils import (
     get_root_dir
@@ -127,6 +128,7 @@ def plot_orbit_histogram(orbits, figsize=(6, 4)):
     plt.close()
     
 
+
 def compute_automorphism_metrics(node_groups, num_nodes):
     """
     Computes numerical metrics for graph automorphism based on WL node grouping.
@@ -138,8 +140,9 @@ def compute_automorphism_metrics(node_groups, num_nodes):
         dict: Automorphism metrics {A_r1, C_auto, H_auto}
     """
     # Compute the size of each group (how many nodes share the same WL label)
-    group_sizes = np.array([len(group) for group in node_groups.values()])
 
+    group_sizes = np.array([len(group) for group in node_groups.values()])
+    
     A_r1 = np.sum(group_sizes**2) / num_nodes**2
     C_auto = len(node_groups)
     A_r_norm_1 = 1 + np.log(A_r1) / np.log(num_nodes) # lower is less automorphism
@@ -155,6 +158,49 @@ def compute_automorphism_metrics(node_groups, num_nodes):
         "num_nodes": num_nodes,
         "automorphism_score": automorphism_score
     }, num_nodes, group_sizes
+
+
+
+def count_automorphic_edges(G, node_groups:list):
+    """
+    Counts intra-orbit and inter-orbit edges in a graph G based on node_groups,
+    excluding nodes that are the only ones in their group.
+
+    Parameters:
+        G (networkx.Graph): The input graph.
+        node_groups (list): A list where the index is the node ID and the value is the orbit/group ID.
+
+    Returns:
+        tuple: (intra_orbit_edges, inter_orbit_edges)
+    """
+    node_groups = node_groups.tolist() if isinstance(node_groups, Tensor) else node_groups
+    group_counts = Counter(node_groups)
+    
+    unique_nodes = set()
+    for i, group in enumerate(node_groups):
+        if group_counts[group] == 1:
+            unique_nodes.add(i)
+
+    valid_nodes = set()
+    for i, group in enumerate(node_groups):
+        if group_counts[group] > 1:
+            valid_nodes.add(i)
+
+    valid_nodes = list(valid_nodes)
+    intra_orbit_edges = 0
+    inter_orbit_edges = 0
+    for u, v in G.edges():
+        # if u in unique_nodes and v in unique_nodes:
+        #     continue 
+        # print(f"u: {u}, v: {v}, group_u: {node_groups[u]}, group_v: {node_groups[v]}")
+        if node_groups[u] == node_groups[v]:
+            intra_orbit_edges += 1
+        else:
+            inter_orbit_edges += 1
+    print(f"Intra-orbit edges: {intra_orbit_edges}, Inter-orbit edges: {inter_orbit_edges}")
+    print(f"Non-distinguishable edges: {(intra_orbit_edges+inter_orbit_edges)}")
+    return intra_orbit_edges, inter_orbit_edges
+
 
 
 # random split dataset

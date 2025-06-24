@@ -443,7 +443,7 @@ if '__name__' == "__main__":
 
     graph_type =  GraphType.ERDOS_RENYI
     N = 10
-   
+
     if graph_type == RegularTilling.SQUARE_GRID:
         G, _, _, pos = init_regular_tilling(N, RegularTilling.SQUARE_GRID, seed=None)
     elif graph_type == 'GraphType.COMPLETE':
