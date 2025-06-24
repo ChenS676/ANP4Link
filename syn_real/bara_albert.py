@@ -357,7 +357,7 @@ def plot_histogram_group_size_log_scale(group_sizes, metrics_before, args, save_
     
 def parse_args():
     parser = argparse.ArgumentParser(description='homo')
-    parser.add_argument('--data_name', type=str, default="Cora")
+    parser.add_argument('--data_name', type=str, default="bara_albert")
     parser.add_argument('--neg_mode', type=str, default='equal')
     parser.add_argument('--gnn_model', type=str, default='GCN')
     parser.add_argument('--score_model', type=str, default='mlp_score')
@@ -445,7 +445,18 @@ def data2dict(data, splits, data_name) -> dict:
         datadict.update({'train_val': torch.cat([splits['valid']['edge'], splits['train']['edge']])})
         datadict.update({'x': data.x}) 
     else:
-        raise ValueError('data_name not supported')
+        print('data_name not supported')
+        #raise ValueError('data_name not supported')
+        datadict = {}
+        datadict.update({'adj': data.adj_t})
+        datadict.update({'train_pos': splits['train']['edge']})
+        # datadict.update({'train_neg': splits['train']['edge_neg']})
+        datadict.update({'valid_pos': splits['valid']['edge']})
+        datadict.update({'valid_neg': splits['valid']['edge_neg']})
+        datadict.update({'test_pos': splits['test']['edge']})
+        datadict.update({'test_neg': splits['test']['edge_neg']})   
+        datadict.update({'train_val': torch.cat([splits['valid']['edge'], splits['train']['edge']])})
+        datadict.update({'x': data.x}) 
     return datadict
 
 
@@ -698,7 +709,7 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
         if args.wandb_log:
             wandb.init(
                 project=f"{args.data_name}_",
-                name=f"{args.data_name}_{args.batch_size}{args.lr}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
+                name=f"{args.data_name}_num{stats['Number of Nodes']}_{args.batch_size}_{args.lr}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
             )
             wandb.config.update(args)
         print(f'#################################          Run {run}          #################################')
@@ -776,10 +787,23 @@ def main():
     file_exists = os.path.isfile(csv_path)
     
 
-    N = 2708 if args.data_name == 'Cora' else 3327 if args.data_name == 'Citeseer' else 1500
-    data = generate_graph(N, GraphType.BARABASI_ALBERT, seed=0)
-    graph = from_networkx(data)
-    run_training_pipeline(graph, {}, 0, 0, 0, args)
+    for N in range(100, 1001, 100):
+        G = generate_graph(N, GraphType.BARABASI_ALBERT, seed=0)
+        graph = from_networkx(G)
+        
+        from syn_real.disjoint_syn import get_graph_orbits
+        get_graph_orbits(graph.edge_index, graph.num_nodes, num_iterations=30)
+        orbits, num_orbit = get_graph_orbits(G)
+        # print(f"Number of orbits: {num_orbit}")
+
+        custom_labels = {}
+        for i, ov in zip(G.nodes(), orbits):
+                custom_labels[i] = f"{ov}"
+
+        count_automorphic_edges(G, orbits)
+        
+        metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
+        # run_training_pipeline(graph, {}, 0, 0, 0, args)
 
 if __name__ == "__main__":
     main()
