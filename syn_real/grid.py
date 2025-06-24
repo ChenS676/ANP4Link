@@ -741,7 +741,7 @@ def parse_args():
     parser.add_argument('--eval_metric', type=str, default='AUC')
     
     ### train setting
-    parser.add_argument('--batch_size', type=int, default=2**8)
+    parser.add_argument('--batch_size', type=int, default=2**10)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--eval_steps', type=int, default=1)
