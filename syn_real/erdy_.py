@@ -17,19 +17,6 @@ from torch_geometric.utils import (
     to_networkx
 )
 from syn_graph.graph_generation import GraphType, generate_graph
-from baselines.gnn_utils import (GCN, 
-                                 GAT, 
-                                 SAGE, 
-                                 GIN, 
-                                 MF, 
-                                 DGCNN, 
-                                 GCN_seal, 
-                                 SAGE_seal, 
-                                 DecoupleSEAL, 
-                                 mlp_score, 
-                                 dot_product, 
-                                 ChebGCN, 
-                                 MixHopGCN)
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -39,8 +26,6 @@ import copy
 import torch
 import argparse
 from torch_sparse import SparseTensor
-from torch_geometric.datasets import Planetoid 
-from ogb.linkproppred import Evaluator, PygLinkPropPredDataset
 from torch.utils.data import DataLoader
 import wandb
 from syn_real.disjoint_syn import (create_disjoint_graph,
@@ -791,19 +776,19 @@ def main():
     
 
     for N in range(100, 1001, 100):
-        G = generate_graph(N, GraphType.BARABASI_ALBERT, seed=0)
+        G = generate_graph(N, GraphType.ERDOS_RENYI, seed=0)
         graph = from_networkx(G)
         
         # _, _, orbits = run_wl_test_and_group_nodes(graph.edge_index, num_nodes=graph.num_nodes, num_iterations=100)
         orbits, num_orbit = get_graph_orbits(G)
-        print(f"Number of orbits: {num_orbit}")
+        print(f"Number of orbits: {len(orbits)}")
 
         custom_labels = {}
         for i, ov in zip(G.nodes(), orbits):
                 custom_labels[i] = f"{ov}"
-        from syn_real.disjoint_syn import analyze_automorphisms
+
         count_automorphic_edges(G, orbits)
-        analyze_automorphisms(G)
+        
         # metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
         # run_training_pipeline(graph, {}, 0, 0, 0, args)
 
