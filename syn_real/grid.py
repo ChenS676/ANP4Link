@@ -726,7 +726,7 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='homo')
-    parser.add_argument('--data_name', type=str, default="ERDOS_RENYI")
+    parser.add_argument('--data_name', type=str, default="Grid")
     parser.add_argument('--neg_mode', type=str, default='equal')
     parser.add_argument('--gnn_model', type=str, default='GCN')
     parser.add_argument('--score_model', type=str, default='mlp_score')
@@ -741,7 +741,7 @@ def parse_args():
     parser.add_argument('--eval_metric', type=str, default='AUC')
     
     ### train setting
-    parser.add_argument('--batch_size', type=int, default=2**8)
+    parser.add_argument('--batch_size', type=int, default=2**10)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--eval_steps', type=int, default=1)
@@ -789,8 +789,8 @@ def main():
     file_exists = os.path.isfile(csv_path)
     
 
-    for N in range(100, 1001, 100):
-        G = generate_graph(N, GraphType.ERDOS_RENYI, seed=0)
+    for N in range(1000, 2001, 100):
+        G = generate_graph(N, GraphType.GRID, seed=0)
         graph = from_networkx(G)
         
         # _, _, orbits = run_wl_test_and_group_nodes(graph.edge_index, num_nodes=graph.num_nodes, num_iterations=100)
