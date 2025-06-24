@@ -201,7 +201,7 @@ if __name__ == '__main__':
     inter_ratio = 1
     intra_ratio = 1
     total_edges = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    interval = 3
+    interval = 1
     for edges in total_edges:
         if inter_ratio != 0 and intra_ratio != 0 and total_edges != 0:
             updated_graph_data, new_edges = add_random_edges(data, inter_ratio=inter_ratio, total_edges=edges*interval)
