@@ -28,10 +28,10 @@ import argparse
 from torch_sparse import SparseTensor
 from torch.utils.data import DataLoader
 import wandb
-# from syn_real.disjoint_syn import (create_disjoint_graph,
-#                                     get_graph_orbits,
-#                                     add_random_edges,
-#                                     plot_graph_with_orbits)
+from syn_real.disjoint_syn import (create_disjoint_graph,
+                                    get_graph_orbits,
+                                    add_random_edges,
+                                    plot_graph_with_orbits)
 
 from syn_real.gnn_utils  import evaluate_hits, evaluate_auc, evaluate_mrr
 from syn_real.gnn_utils import (
@@ -642,7 +642,7 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
     args.name_tag = (
         f'{args.data_name}_'
         # f'Orbits_{metrics["Number of Unique Groups (C_auto)"]:.2f}_'
-        # f'ArScore_{metrics["automorphism_score"]:.2f}'
+        f'{metrics}_'
         f'{args.gnn_model}_'
         f'{args.score_model}_'
         # f'inter{inter:.2f}_'
@@ -657,7 +657,7 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
     for run in range(args.runs):
         if args.wandb_log:
             wandb.init(
-                project=f"{args.data_name}_",
+                project=f"{args.data_name}_2",
                 name=f"{args.data_name}_num{stats['Number of Nodes']}_{args.batch_size}_{args.lr}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
             )
             wandb.config.update(args)
@@ -789,22 +789,31 @@ def main():
     file_exists = os.path.isfile(csv_path)
     
 
-    for N in range(1000, 2001, 100):
+    for N in range(50, 201, 10):
         G = generate_graph(N, GraphType.GRID, seed=0)
         graph = from_networkx(G)
         
-        # _, _, orbits = run_wl_test_and_group_nodes(graph.edge_index, num_nodes=graph.num_nodes, num_iterations=100)
-        # orbits, num_orbit = get_graph_orbits(G)
-        # print(f"Number of orbits: {len(orbits)}")
-
-        # custom_labels = {}
-        # for i, ov in zip(G.nodes(), orbits):
-        #         custom_labels[i] = f"{ov}"
+        _, _, orbits = run_wl_test_and_group_nodes(graph.edge_index, num_nodes=graph.num_nodes, num_iterations=100)
+        from syn_real.disjoint_syn import get_regular_orbit_labels
+        # orbits, num_orbit = get_regular_orbit_labels(G)
+        try:
+            print(f"Number of orbits: {num_orbit}/{G.number_of_nodes()}={num_orbit/G.number_of_nodes()})")
+        except NameError:
+            num_orbit = len(set(orbits.tolist()))
+            print(f"Number of orbits: {num_orbit}/{G.number_of_nodes()}={num_orbit/G.number_of_nodes()})")
+        from syn_real.disjoint_syn import (analyze_automorphisms, 
+                                           count_orbit_edges, 
+                                           hash_links_by_orbit)
+        count_orbit_edges(G, orbits)
+        # hash_links_by_orbit(G, orbits)
+        custom_labels = {}
+        for i, ov in zip(G.nodes(), orbits):
+                custom_labels[i] = f"{ov}"
 
         # count_automorphic_edges(G, orbits)
         
         # metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
-        run_training_pipeline(graph, {}, 0, 0, 0, args)
+        run_training_pipeline(graph, num_orbit/G.number_of_nodes(), 0, 0, 0, args)
 
 if __name__ == "__main__":
     main()

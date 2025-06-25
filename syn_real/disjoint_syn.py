@@ -69,6 +69,48 @@ def get_graph_orbits(graph: nx.Graph) -> list:
     return orbits, num_orbit
 
 
+import networkx as nx
+import pynauty
+
+def get_regular_orbit_labels(G: nx.Graph):
+    """
+    Given a NetworkX graph, compute the automorphism orbits using pynauty.
+    
+    Args:
+        G (networkx.Graph): Input undirected graph.
+        
+    Returns:
+        orbits (List[int]): List of orbit IDs indexed by node ID.
+        orbit_labels (Dict[node, str]): Mapping from node to its orbit label (as a string).
+    """
+    # Map original node labels to integers
+    node_mapping = {node: idx for idx, node in enumerate(G.nodes())}
+    reverse_mapping = {idx: node for node, idx in node_mapping.items()}
+    
+    # Build adjacency dict for pynauty
+    adj_dict = {
+        node_mapping[node]: [
+            node_mapping[neighbor] for neighbor in G.neighbors(node)
+        ]
+        for node in G.nodes()
+    }
+    
+    # Construct pynauty graph and compute automorphism group
+    n = len(G.nodes())
+    G_pynauty = pynauty.Graph(number_of_vertices=n, adjacency_dict=adj_dict, directed=False)
+    _, _, _, orbits, _ = pynauty.autgrp(G_pynauty)
+
+    # Relabel orbits to compact IDs
+    new_orbit_ids = {orbit: idx for idx, orbit in enumerate(sorted(set(orbits)))}
+    orbits_mapped = [new_orbit_ids[orbit] for orbit in orbits]
+
+    # Map back to original node labels
+    orbit_labels = {
+        reverse_mapping[i]: str(orbit_id) for i, orbit_id in enumerate(orbits_mapped)
+    }
+
+    return orbit_labels, len(set(orbits_mapped))
+
 
 # %%
 def plot_orbit_dist(orbits):
@@ -254,6 +296,7 @@ def analyze_automorphisms(G):
     
     plot_orbit_dist(orbits)
     plot_orbit(orbits)
+
     hash_links_by_orbit(G, orbits)
     plot_graph_with_orbits(G, 
                            None, 

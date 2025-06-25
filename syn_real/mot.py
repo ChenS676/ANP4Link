@@ -185,7 +185,8 @@ def count_orbit_edges(G, node_groups):
                     intra_orbit_edges += 1
                 else:
                     inter_orbit_edges += 1
-    print(f"Intra-orbit edges: {intra_orbit_edges}, Inter-orbit edges: {inter_orbit_edges}")
+    # print(f"Intra-orbit edges: {intra_orbit_edges}, Inter-orbit edges: {inter_orbit_edges}")
+    print(f"{inter_orbit_edges/ (intra_orbit_edges + inter_orbit_edges) * 100}, of edges are inter-orbit")
     return intra_orbit_edges, inter_orbit_edges
 
 

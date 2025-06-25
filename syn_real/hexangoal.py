@@ -17,19 +17,6 @@ from torch_geometric.utils import (
     to_networkx
 )
 from syn_graph.graph_generation import GraphType, generate_graph
-from baselines.gnn_utils import (GCN, 
-                                 GAT, 
-                                 SAGE, 
-                                 GIN, 
-                                 MF, 
-                                 DGCNN, 
-                                 GCN_seal, 
-                                 SAGE_seal, 
-                                 DecoupleSEAL, 
-                                 mlp_score, 
-                                 dot_product, 
-                                 ChebGCN, 
-                                 MixHopGCN)
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -39,8 +26,6 @@ import copy
 import torch
 import argparse
 from torch_sparse import SparseTensor
-from torch_geometric.datasets import Planetoid 
-from ogb.linkproppred import Evaluator, PygLinkPropPredDataset
 from torch.utils.data import DataLoader
 import wandb
 from syn_real.disjoint_syn import (create_disjoint_graph,
@@ -79,7 +64,20 @@ from syn_real.gnn_ogb_heart import init_seed
 from syn_real.automorphism import (run_wl_test_and_group_nodes, 
                                    count_automorphic_edges, 
                                    compute_automorphism_metrics)
-
+from ogb.linkproppred import Evaluator, PygLinkPropPredDataset
+from baselines.gnn_utils import (GCN, 
+                                 GAT, 
+                                 SAGE, 
+                                 GIN, 
+                                 MF, 
+                                 DGCNN, 
+                                 GCN_seal, 
+                                 SAGE_seal, 
+                                 DecoupleSEAL, 
+                                 mlp_score, 
+                                 dot_product, 
+                                 ChebGCN, 
+                                 MixHopGCN)
 
 # python real_syn_automorphic.py --data_name Citeseer --gnn_model GCN --lr 0.01 --dropout 0.3 --l2 1e-4 --num_layers 1 --num_layers_predictor 3 --hidden_channels 128 --epochs 9999 --kill_cnt 10 --eval_steps 5 --batch_size 1024 
 # python real_syn_automorphic.py --data_name Cora --gnn_model GCN --lr 0.01 --dropout 0.3 --l2 1e-4 --num_layers 1 --num_layers_predictor 3 --hidden_channels 128 --epochs 9999 --kill_cnt 10 --eval_steps 5 --batch_size 1024 
@@ -358,59 +356,7 @@ def plot_histogram_group_size_log_scale(group_sizes, metrics_before, args, save_
     print(f"Automorphism fraction before adding random edges: {metrics_before}")
     
     
-def parse_args():
-    parser = argparse.ArgumentParser(description='homo')
-    parser.add_argument('--data_name', type=str, default="bara_albert")
-    parser.add_argument('--neg_mode', type=str, default='equal')
-    parser.add_argument('--gnn_model', type=str, default='GCN')
-    parser.add_argument('--score_model', type=str, default='mlp_score')
-    parser.add_argument('--pt_path', default=f"plots/Citeseer/processed_graph_inter0.5_intra0.5_edges1000_auto0.7200_norm1_0.7676.pt",
-                        type=str)
-    ##gnn setting
-    parser.add_argument('--num_layers', type=int, default=3)
-    parser.add_argument('--num_layers_predictor', type=int, default=3)
-    parser.add_argument('--hidden_channels', type=int, default=32)
-    parser.add_argument('--gnnout_hidden_channels', type=int, default=512)
-    parser.add_argument('--dropout', type=float, default=0.1)
-    parser.add_argument('--eval_metric', type=str, default='AUC')
-    
-    ### train setting
-    parser.add_argument('--batch_size', type=int, default=2**8)
-    parser.add_argument('--lr', type=float, default=0.001)
-    parser.add_argument('--epochs', type=int, default=50)
-    parser.add_argument('--eval_steps', type=int, default=1)
-    parser.add_argument('--runs', type=int, default=1)
-    parser.add_argument('--kill_cnt',           dest='kill_cnt',      default=20,    type=int,       help='early stopping')
-    parser.add_argument('--output_dir', type=str, default='output_test')
-    parser.add_argument('--l2',		type=float,             default=0.0,			help='L2 Regularization for Optimizer')
-    parser.add_argument('--seed', type=int, default=999)
 
-    # 
-    parser.add_argument('--save', action='store_true', default=False)
-    parser.add_argument('--use_saved_model', action='store_true', default=False)
-    parser.add_argument('--device', type=int, default=0)
-    parser.add_argument('--log_steps', type=int, default=1)
-    parser.add_argument('--use_valedges_as_input', action='store_true', default=False)
-    parser.add_argument('--remove_edge_aggre', action='store_true', default=False)
-    parser.add_argument('--name_tag', type=str, default='')
-    parser.add_argument('--gin_mlp_layer', type=int, default=2)
-    parser.add_argument('--gat_head', type=int, default=1)
-    parser.add_argument('--cat_node_feat_mf', default=False, action='store_true')
-    parser.add_argument('--cat_n2v_feat', default=False, action='store_true')
-    parser.add_argument('--test_batch_size', type=int, default=1024 * 64) 
-    parser.add_argument('--use_hard_negative', default=False, action='store_true')
-    parser.add_argument('--wandb_log', default=True, action='store_true')
-    parser.add_argument('--metric', type=str, default='AUC')
-    parser.add_argument('--inter_ratio', type=float, required=False, help='Inter ratio', default=0.5)
-    parser.add_argument('--intra_ratio', type=float, required=False, help='Intra ratio', default=0.5)
-    parser.add_argument('--total_edges', type=int, required=False, help='Total edges', default=1000)
-    args = parser.parse_args()
-    # print('cat_node_feat_mf: ', args.cat_node_feat_mf)
-    # print('use_val_edge:', args.use_valedges_as_input)
-    # print('use_hard_negative: ',args.use_hard_negative)
-    # print(args)
-    return args
-    
     
 def randomsplit(data, val_ratio: float = 0.05, test_ratio: float = 0.15):
     def removerepeated(ei):
@@ -696,7 +642,7 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
     args.name_tag = (
         f'{args.data_name}_'
         # f'Orbits_{metrics["Number of Unique Groups (C_auto)"]:.2f}_'
-        # f'ArScore_{metrics["automorphism_score"]:.2f}'
+        f'{metrics}_'
         f'{args.gnn_model}_'
         f'{args.score_model}_'
         # f'inter{inter:.2f}_'
@@ -778,39 +724,96 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
     mvari_str2csv(args.name_tag, save_dict, f'results/syn_{args.data_name}_{args.gnn_model}tuned.csv')
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='homo')
+    parser.add_argument('--data_name', type=str, default="Hexangoal")
+    parser.add_argument('--neg_mode', type=str, default='equal')
+    parser.add_argument('--gnn_model', type=str, default='GCN')
+    parser.add_argument('--score_model', type=str, default='mlp_score')
+    parser.add_argument('--pt_path', default=f"plots/Citeseer/processed_graph_inter0.5_intra0.5_edges1000_auto0.7200_norm1_0.7676.pt",
+                        type=str)
+    ##gnn setting
+    parser.add_argument('--num_layers', type=int, default=3)
+    parser.add_argument('--num_layers_predictor', type=int, default=3)
+    parser.add_argument('--hidden_channels', type=int, default=32)
+    parser.add_argument('--gnnout_hidden_channels', type=int, default=512)
+    parser.add_argument('--dropout', type=float, default=0.1)
+    parser.add_argument('--eval_metric', type=str, default='AUC')
+    
+    ### train setting
+    parser.add_argument('--batch_size', type=int, default=2**10)
+    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--epochs', type=int, default=50)
+    parser.add_argument('--eval_steps', type=int, default=1)
+    parser.add_argument('--runs', type=int, default=1)
+    parser.add_argument('--kill_cnt',           dest='kill_cnt',      default=20,    type=int,       help='early stopping')
+    parser.add_argument('--output_dir', type=str, default='output_test')
+    parser.add_argument('--l2',		type=float,             default=0.0,			help='L2 Regularization for Optimizer')
+    parser.add_argument('--seed', type=int, default=999)
+
+    # 
+    parser.add_argument('--save', action='store_true', default=False)
+    parser.add_argument('--use_saved_model', action='store_true', default=False)
+    parser.add_argument('--device', type=int, default=0)
+    parser.add_argument('--log_steps', type=int, default=1)
+    parser.add_argument('--use_valedges_as_input', action='store_true', default=False)
+    parser.add_argument('--remove_edge_aggre', action='store_true', default=False)
+    parser.add_argument('--name_tag', type=str, default='')
+    parser.add_argument('--gin_mlp_layer', type=int, default=2)
+    parser.add_argument('--gat_head', type=int, default=1)
+    parser.add_argument('--cat_node_feat_mf', default=False, action='store_true')
+    parser.add_argument('--cat_n2v_feat', default=False, action='store_true')
+    parser.add_argument('--test_batch_size', type=int, default=1024 * 64) 
+    parser.add_argument('--use_hard_negative', default=False, action='store_true')
+    parser.add_argument('--wandb_log', default=True, action='store_true')
+    parser.add_argument('--metric', type=str, default='AUC')
+    parser.add_argument('--inter_ratio', type=float, required=False, help='Inter ratio', default=0.5)
+    parser.add_argument('--intra_ratio', type=float, required=False, help='Intra ratio', default=0.5)
+    parser.add_argument('--total_edges', type=int, required=False, help='Total edges', default=1000)
+    args = parser.parse_args()
+    # print('cat_node_feat_mf: ', args.cat_node_feat_mf)
+    # print('use_val_edge:', args.use_valedges_as_input)
+    # print('use_hard_negative: ',args.use_hard_negative)
+    # print(args)
+    return args
+    
 
 def main():
     args = parse_args()
     init_seed(args.seed)
 
-    if os.path.exists(f'plots/{args.data_name}') == False:
-        os.makedirs(f'plots/{args.data_name}')
+    # if os.path.exists(f'plots/{args.data_name}') == False:
+    #     os.makedirs(f'plots/{args.data_name}')
 
     csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
     file_exists = os.path.isfile(csv_path)
     
 
     for N in range(100, 1001, 100):
-        G = generate_graph(N, GraphType.BARABASI_ALBERT, seed=0)
+        G = generate_graph(N, GraphType.GRID, seed=0)
         graph = from_networkx(G)
         
-        # _, _, orbits = run_wl_test_and_group_nodes(graph.edge_index, num_nodes=graph.num_nodes, num_iterations=100)
-        orbits, num_orbit = get_graph_orbits(G)
-        print(f"Number of orbits: {num_orbit}")
-
+        _, _, orbits = run_wl_test_and_group_nodes(graph.edge_index, num_nodes=graph.num_nodes, num_iterations=100)
+        from syn_real.disjoint_syn import get_regular_orbit_labels
+        # orbits, num_orbit = get_regular_orbit_labels(G)
+        try:
+            print(f"Number of orbits: {num_orbit}/{G.number_of_nodes()}={num_orbit/G.number_of_nodes()})")
+        except NameError:
+            num_orbit = len(set(orbits))
+            print(f"Number of orbits: {num_orbit}/{G.number_of_nodes()}={num_orbit/G.number_of_nodes()})")
+        from syn_real.disjoint_syn import (analyze_automorphisms, 
+                                           count_orbit_edges, 
+                                           hash_links_by_orbit)
+        count_orbit_edges(G, orbits)
+        # hash_links_by_orbit(G, orbits)
         custom_labels = {}
         for i, ov in zip(G.nodes(), orbits):
                 custom_labels[i] = f"{ov}"
 
-        from syn_real.mot import count_orbit_edges, count_automorphic_edges
-        from syn_real.disjoint_real import hash_links_by_orbit, count_automorphic_edges
-        from syn_real.disjoint_syn import analyze_automorphisms, hash_links_by_orbit
-        count_orbit_edges(G, orbits)
-        hash_links_by_orbit(G, orbits)
-        count_automorphic_edges(G, orbits)
-        analyze_automorphisms(G)
+        # count_automorphic_edges(G, orbits)
+        
         # metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
-        # run_training_pipeline(graph, {}, 0, 0, 0, args)
+        run_training_pipeline(graph, num_orbit/G.number_of_nodes(), 0, 0, 0, args)
 
 if __name__ == "__main__":
     main()
