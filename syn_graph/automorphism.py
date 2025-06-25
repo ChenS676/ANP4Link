@@ -880,6 +880,8 @@ def plot_gaussian():
     plt.grid(True)
     plt.savefig('gaussian_distributions.png')
 
+
+
 if __name__ == "__main__":
     # DRAFT THE DATASET FROM THE SYNTHETIC GRAPH where their automophism should be 1 and for tree it should be very low
     test_automorphism()

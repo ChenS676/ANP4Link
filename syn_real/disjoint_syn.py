@@ -292,7 +292,7 @@ def analyze_automorphisms(G):
 
     count_orbit_edges(G, orbits)
     
-    metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
+    # metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
     
     plot_orbit_dist(orbits)
     plot_orbit(orbits)
@@ -303,7 +303,7 @@ def analyze_automorphisms(G):
                            orbits, 
                            custom_labels=custom_labels, 
                            figsize=(8, 6), cmap='tab20b')
-    return metrics, num_nodes, group_sizes, orbits
+    
 
 
 # %% 

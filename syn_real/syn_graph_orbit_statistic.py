@@ -1,6 +1,7 @@
+# %%
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, '/hkfs/work/workspace/scratch/cc7738-automorphism/ANP4Link')
 import argparse
 import csv
 import numpy as np
@@ -25,9 +26,6 @@ from torch_geometric.utils import (
 )
 import itertools
 from ogb.linkproppred import PygLinkPropPredDataset
-from baselines.gnn_utils import (
-    get_root_dir
-)
 import os
 import pandas as pd
 import numpy as np
@@ -47,8 +45,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from syn_real.custom_wl import WLConvOptimized, WLConvMultiFeature, WLConvMultiFeature, WLConvOptimized
 
-
-
+# %%
 def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
     """
     Runs the Weisfeiler-Lehman (WL) test and groups nodes with similar hashed labels.
@@ -77,7 +74,7 @@ def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
     _, new_labels = torch.unique(node_labels, return_inverse=True)
     return node_groups, node_labels, new_labels
 
-
+# %%
 def plot_graph_with_orbits(G, pos, orbits, custom_labels=None, figsize=(8, 6), cmap='tab20b'):
     """
     Plots a NetworkX graph with node coloring based on orbit labels.
@@ -103,11 +100,11 @@ def plot_graph_with_orbits(G, pos, orbits, custom_labels=None, figsize=(8, 6), c
         edgecolors='black'
     )
     plt.title("Graph Colored by Orbit Labels")
-    plt.savefig('graph_with_orbits.png', bbox_inches='tight')
+    # plt.savefig('graph_with_orbits.png', bbox_inches='tight')
     plt.show()
     plt.close()
 
-
+# %%
 def plot_orbit_histogram(orbits, figsize=(6, 4)):
     """
     Plots a histogram of orbit label frequencies.
@@ -127,8 +124,8 @@ def plot_orbit_histogram(orbits, figsize=(6, 4)):
     plt.grid(axis='y', linestyle='--', alpha=0.7)
     plt.show()
     plt.close()
-    
 
+# %%
 def compute_automorphism_metrics(node_groups, num_nodes):
     """
     Computes numerical metrics for graph automorphism based on WL node grouping.
@@ -159,7 +156,7 @@ def compute_automorphism_metrics(node_groups, num_nodes):
         "automorphism_score": automorphism_score
     }, num_nodes, group_sizes
 
-
+# %%
 def count_automorphic_edges(G, node_groups:list):
     """
     Counts intra-orbit and inter-orbit edges in a graph G based on node_groups,
@@ -200,7 +197,7 @@ def count_automorphic_edges(G, node_groups:list):
     print(f"Non-distinguishable edges: {(intra_orbit_edges+inter_orbit_edges)}")
     return intra_orbit_edges, inter_orbit_edges
 
-
+# %%
 # random split dataset
 def randomsplit(dataset, val_ratio: float=0.10, test_ratio: float=0.2):
     def removerepeated(ei):
@@ -220,7 +217,35 @@ def randomsplit(dataset, val_ratio: float=0.10, test_ratio: float=0.2):
     split_edge['test']['edge_neg'] = removerepeated(data.test_neg_edge_index).t()
     return split_edge
 
+# %%
+import matplotlib.pyplot as plt
 
+def plot_degree_distribution_stem(G):
+    """
+    Plots the degree distribution of a graph G as a stem plot.
+
+    Parameters:
+    - G: A NetworkX graph object.
+    """
+    degrees = [d for _, d in G.degree()]
+    degrees = sorted(degrees, reverse=True)
+
+    plt.figure()
+    markerline, stemlines, _ = plt.stem(
+        degrees,
+        markerfmt='bo',
+        basefmt=' '
+    )
+    markerline.set_markerfacecolor('none')
+    stemlines.set_linewidth(0.5)
+
+    plt.xlabel("Degree")
+    plt.ylabel("Frequency")
+    plt.tight_layout()
+    plt.show()
+
+
+# %%
 def dataloader(args):
     if args.data_name in ['ogbl-ddi', 'ogbl-collab', 'ogbl-ppa', 'ogbl-citation2']:
         dataset = PygLinkPropPredDataset(name=args.data_name, 
@@ -276,7 +301,7 @@ def dataloader(args):
         
     return G, num_nodes, edge_index
 
-
+# %%
 def process_random_regular_graph():
 
     for degree in [10]:
@@ -301,8 +326,8 @@ def process_random_regular_graph():
         pd.DataFrame([metrics]).to_csv(csv_path, mode='a', index=False, header=not file_exists)
 
         print(degree)
-        
-        
+
+# %%
 def process_ERDOS_RENYI():
 
     for degree in [2, 4, 6, 8, 10, 20]:
@@ -327,17 +352,16 @@ def process_ERDOS_RENYI():
         pd.DataFrame([metrics]).to_csv(csv_path, mode='a', index=False, header=not file_exists)
         
         print(degree)
-        
 
+# %%
 def save_metrics(metrics, graph_type, csv_path='summary.csv'):
     metrics['data_name'] = str(graph_type)
     df = pd.DataFrame([metrics])
     header = not os.path.isfile(csv_path)
     df.to_csv(csv_path, mode='a', index=False, header=header)
     print("Saved to summary.csv")
-    
-    
-    
+
+# %%
 def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
     if graph_type == RegularTilling.SQUARE_GRID:
         G, _, _, pos = init_regular_tilling(N, RegularTilling.SQUARE_GRID, seed=None)
@@ -360,52 +384,58 @@ def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
             custom_labels[i] = f"{ov}"
 
     plot_graph_with_orbits(G, pos, orbits, custom_labels=custom_labels, figsize=(8, 6), cmap='tab20b')
+    plot_degree_distribution_stem(G)
+    from syn_real.disjoint_syn import (analyze_automorphisms, 
+                                        count_orbit_edges, 
+                                        hash_links_by_orbit)
+    count_orbit_edges(G, orbits)
+    # hash_links_by_orbit(G, orbits)
+    custom_labels = {}
+    for i, ov in zip(G.nodes(), orbits):
+            custom_labels[i] = f"{ov}"
+
+    count_automorphic_edges(G, orbits)
+    analyze_automorphisms(G)
     # save_metrics(metrics, f"{graph_type}_{N}", csv_path='summary.csv')
 
-    exit()
+# %%
+process_graph(10, GraphType.BARABASI_ALBERT)
+process_graph(20, GraphType.TREE)
+process_graph(10, GraphType.TREE)
+
+process_graph(10, GraphType.ERDOS_RENYI)
+process_graph(10, GraphType.RANDOM)
+# Two Extreme Cases:
+process_graph(10, 'GraphType.COMPLETE', is_grid=True, label="GraphType.COMPLETE")  # Regular tiling case
 
 
 
-def test_automorphism():
-    parser = argparse.ArgumentParser(description='homo')
-    # TRIANGULAR = 1
-    # HEXAGONAL = 2
-    # SQUARE_GRID  = 3
-    # KAGOME_LATTICE = 4
-    parser.add_argument('--data_name', type=str, default='ogbl-ppa')
-    args = parser.parse_args()  
+# %%
+process_graph(100, GraphType.STAR)
+process_graph(20, GraphType.LADDER)
+process_graph(20, GraphType.LINE)
+process_graph(20, GraphType.CATERPILLAR)
+process_graph(20, GraphType.LOBSTER)
+
+process_graph(10, GraphType.HEXAGONAL)
+process_graph(10, GraphType.GRID)
+process_graph(10, GraphType.TRIANGULAR)
+process_graph(10, GraphType.CAVEMAN)
 
 
-    process_graph(10, GraphType.BARABASI_ALBERT)
-    process_graph(100, GraphType.TREE)
-    process_graph(10, GraphType.TREE)
+# %%
+process_graph(100, GraphType.STAR)
+process_graph(200, GraphType.LADDER)
+process_graph(200, GraphType.LINE)
+process_graph(200, GraphType.CATERPILLAR)
+process_graph(200, GraphType.LOBSTER)
 
-    # Two Extreme Cases:
-    process_graph(40, 'GraphType.COMPLETE', is_grid=True, label="GraphType.COMPLETE")  # Regular tiling case
-    process_graph(300, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR")  # Regular tiling case
-    process_graph(40, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
-    process_graph(100, 'GraphType.COMPLETE', is_grid=True, label="GraphType.COMPLETE")  # Regular tiling case
-    process_graph(1000, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR")  # Regular tiling case
-    process_graph(100, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
-
-    # G, num_nodes, edge_index = dataloader(args)
-    
-    # node_groups, node_labels = run_wl_test_and_group_nodes(edge_index, num_nodes=num_nodes, num_iterations=100)
-    # metrics, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
-    # plt.figure()
-    # plt.plot(group_sizes)
-    # plt.savefig(f'group_size_{args.data_name}.png')
-    
-    # metrics.update({'data_name': args.data_name})
-    # print(metrics)
-    # pd.DataFrame([metrics]).to_csv(f'{args.data_name}_alpha.csv', index=False)
-    # del node_labels, node_groups, metrics
+# %%
+process_graph(10, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR")  # Regular tiling case
+process_graph(10, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
+process_graph(20, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR")  # Regular tiling case
+process_graph(20, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
 
 
 
-if __name__ == "__main__":
-    # DRAFT THE DATASET FROM THE SYNTHETIC GRAPH where their automophism should be 1 and for tree it should be very low
-    test_automorphism()
-    exit(-1)
-    process_ERDOS_RENYI()
-    process_random_regular_graph()
+
