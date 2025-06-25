@@ -781,12 +781,6 @@ def parse_args():
 def main():
     args = parse_args()
     init_seed(args.seed)
-
-    if os.path.exists(f'plots/{args.data_name}') == False:
-        os.makedirs(f'plots/{args.data_name}')
-
-    csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
-    file_exists = os.path.isfile(csv_path)
     
 
     for N in range(50, 201, 10):
@@ -795,25 +789,27 @@ def main():
         
         _, _, orbits = run_wl_test_and_group_nodes(graph.edge_index, num_nodes=graph.num_nodes, num_iterations=100)
         from syn_real.disjoint_syn import get_regular_orbit_labels
-        # orbits, num_orbit = get_regular_orbit_labels(G)
+        orbits, num_orbit = get_regular_orbit_labels(G)
         try:
             print(f"Number of orbits: {num_orbit}/{G.number_of_nodes()}={num_orbit/G.number_of_nodes()})")
         except NameError:
             num_orbit = len(set(orbits.tolist()))
             print(f"Number of orbits: {num_orbit}/{G.number_of_nodes()}={num_orbit/G.number_of_nodes()})")
         from syn_real.disjoint_syn import (analyze_automorphisms, 
-                                           count_orbit_edges, 
-                                           hash_links_by_orbit)
+                                            count_orbit_edges, 
+                                            hash_links_by_orbit)
         count_orbit_edges(G, orbits)
         # hash_links_by_orbit(G, orbits)
         custom_labels = {}
         for i, ov in zip(G.nodes(), orbits):
                 custom_labels[i] = f"{ov}"
 
+        count_automorphic_edges(G, orbits)
+
         # count_automorphic_edges(G, orbits)
         
         # metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
-        run_training_pipeline(graph, num_orbit/G.number_of_nodes(), 0, 0, 0, args)
+        # run_training_pipeline(graph, num_orbit/G.number_of_nodes(), 0, 0, 0, args)
 
 if __name__ == "__main__":
     main()

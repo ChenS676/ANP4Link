@@ -32,7 +32,10 @@ import wandb
 #                                     get_graph_orbits,
 #                                     add_random_edges,
 #                                     plot_graph_with_orbits)
-
+from syn_real.disjoint_syn import (create_disjoint_graph,
+                                    get_graph_orbits,
+                                    add_random_edges,
+                                    plot_graph_with_orbits)
 from syn_real.gnn_utils  import evaluate_hits, evaluate_auc, evaluate_mrr
 from syn_real.gnn_utils import (
     get_root_dir, 
@@ -793,15 +796,15 @@ def main():
         G = generate_graph(N, GraphType.ERDOS_RENYI, seed=0)
         graph = from_networkx(G)
         
-        # _, _, orbits = run_wl_test_and_group_nodes(graph.edge_index, num_nodes=graph.num_nodes, num_iterations=100)
-        # orbits, num_orbit = get_graph_orbits(G)
+        _, _, orbits = run_wl_test_and_group_nodes(graph.edge_index, num_nodes=graph.num_nodes, num_iterations=100)
+        orbits, num_orbit = get_graph_orbits(G)
         # print(f"Number of orbits: {len(orbits)}")
 
         # custom_labels = {}
         # for i, ov in zip(G.nodes(), orbits):
         #         custom_labels[i] = f"{ov}"
 
-        # count_automorphic_edges(G, orbits)
+        count_automorphic_edges(G, orbits)
         
         # metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
         run_training_pipeline(graph, {}, 0, 0, 0, args)
