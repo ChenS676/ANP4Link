@@ -404,16 +404,24 @@ def hash_links_by_orbit(G: nx.Graph, orbits: list ):
     edge_class_counts = defaultdict(int)
     edge_classes = []
 
-    for u, v in G.edges():
-        orbit_u = node_to_orbit[u]
-        orbit_v = node_to_orbit[v]
-        key = tuple(sorted((orbit_u, orbit_v))) 
-        edge_class_counts[key] += 1
-        edge_classes.append(key)
-
-    # print(f"Edge class counts: {sorted(edge_class_counts.values())[-10:]}")
-    # print(f"Unique Edge classes: {len(set(edge_classes))}")
-    # visualize_orbit_adjacency_matrix(edge_class_counts)
+    try:
+        for u, v in G.edges():
+            orbit_u = node_to_orbit[u]
+            orbit_v = node_to_orbit[v]
+            key = tuple(sorted((orbit_u, orbit_v))) 
+            edge_class_counts[key] += 1
+            edge_classes.append(key)
+    except:
+        for links in G.edges():
+            for u, v in links:
+                orbit_u = node_to_orbit[u]
+                orbit_v = node_to_orbit[v]
+                key = tuple(sorted((orbit_u, orbit_v))) 
+                edge_class_counts[key] += 1
+                edge_classes.append(key)
+    print(f"Edge class counts: {sorted(edge_class_counts.values())[-10:]}")
+    print(f"Unique Edge classes: {len(set(edge_classes))}")
+    visualize_orbit_adjacency_matrix(edge_class_counts)
     return edge_class_counts, edge_classes
 
 

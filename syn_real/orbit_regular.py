@@ -44,6 +44,7 @@ from syn_graph.graph_generation import generate_graph
 import matplotlib.pyplot as plt
 import networkx as nx
 from syn_real.custom_wl import WLConvOptimized, WLConvMultiFeature, WLConvMultiFeature, WLConvOptimized
+from syn_real.disjoint_real import plot_orbit_dist, plot_orbit, hash_links_by_orbit
 
 # %%
 def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
@@ -88,7 +89,10 @@ def plot_graph_with_orbits(G, pos, orbits, custom_labels=None, figsize=(8, 6), c
         cmap (str): Matplotlib colormap for nodes.
     """
     plt.figure(figsize=figsize)
-    node_colors = [orbits[node] for node in G.nodes()]
+    try:
+        node_colors = [orbits[node] for node in G.nodes()]
+    except:
+        node_colors = [orbits[i] for i, node in enumerate(G.nodes())]
     nx.draw(
         G,
         pos=pos,
@@ -362,6 +366,33 @@ def save_metrics(metrics, graph_type, csv_path='summary.csv'):
     print("Saved to summary.csv")
 
 # %%
+def count_orbit_edges(G, node_groups):
+    # Create a mapping: node -> orbit_id
+
+    intra_orbit_edges = 0
+    inter_orbit_edges = 0
+
+    try:
+        for u, v in G.edges():
+            if node_groups[u] == node_groups[v]:
+                intra_orbit_edges += 1
+            else:
+                inter_orbit_edges += 1
+    except:
+    
+        for links in G.edges():
+            for u, v in links:
+                if node_groups[u] == node_groups[v]:
+                    intra_orbit_edges += 1
+                else:
+                    inter_orbit_edges += 1
+    # print(f"Intra-orbit edges: {intra_orbit_edges}, Inter-orbit edges: {inter_orbit_edges}")
+    print(f"{inter_orbit_edges/ (intra_orbit_edges + inter_orbit_edges) * 100}%, of edges are inter-orbit")
+    return intra_orbit_edges, inter_orbit_edges
+
+
+
+# %%
 def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
     if graph_type == RegularTilling.SQUARE_GRID:
         G, _, _, pos = init_regular_tilling(N, RegularTilling.SQUARE_GRID, seed=None)
@@ -378,64 +409,30 @@ def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
     data = from_networkx(G)
     edge_index = data.edge_index
     node_groups, node_labels, orbits = run_wl_test_and_group_nodes(edge_index, num_nodes=G.number_of_nodes(), num_iterations=100)
-    metrics, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, G.number_of_nodes())
+    
     custom_labels = {}
     for i, ov in zip(G.nodes(), orbits):
             custom_labels[i] = f"{ov}"
-
-    plot_graph_with_orbits(G, pos, orbits, custom_labels=custom_labels, figsize=(8, 6), cmap='tab20b')
+            
     plot_degree_distribution_stem(G)
-    from syn_real.disjoint_syn import (analyze_automorphisms, 
-                                        count_orbit_edges, 
-                                        hash_links_by_orbit)
     count_orbit_edges(G, orbits)
-    # hash_links_by_orbit(G, orbits)
-    custom_labels = {}
-    for i, ov in zip(G.nodes(), orbits):
-            custom_labels[i] = f"{ov}"
+    
+    # plot_orbit_dist(orbits)
+    plot_orbit(orbits)
 
-    count_automorphic_edges(G, orbits)
-    analyze_automorphisms(G)
+    hash_links_by_orbit(G, orbits)
+    plot_graph_with_orbits(G, 
+                           None, 
+                           orbits, 
+                           custom_labels=custom_labels, 
+                           figsize=(8, 6), cmap='tab20b')
     # save_metrics(metrics, f"{graph_type}_{N}", csv_path='summary.csv')
 
-# %%
-process_graph(10, GraphType.BARABASI_ALBERT)
-process_graph(20, GraphType.TREE)
-process_graph(10, GraphType.TREE)
-
-process_graph(10, GraphType.ERDOS_RENYI)
-process_graph(10, GraphType.RANDOM)
-# Two Extreme Cases:
-process_graph(10, 'GraphType.COMPLETE', is_grid=True, label="GraphType.COMPLETE")  # Regular tiling case
-
-
 
 # %%
-process_graph(100, GraphType.STAR)
-process_graph(20, GraphType.LADDER)
-process_graph(20, GraphType.LINE)
-process_graph(20, GraphType.CATERPILLAR)
-process_graph(20, GraphType.LOBSTER)
-
-process_graph(10, GraphType.HEXAGONAL)
-process_graph(10, GraphType.GRID)
-process_graph(10, GraphType.TRIANGULAR)
-process_graph(10, GraphType.CAVEMAN)
-
-
-# %%
-process_graph(100, GraphType.STAR)
-process_graph(200, GraphType.LADDER)
-process_graph(200, GraphType.LINE)
-process_graph(200, GraphType.CATERPILLAR)
-process_graph(200, GraphType.LOBSTER)
-
-# %%
-process_graph(10, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR")  # Regular tiling case
-process_graph(10, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
-process_graph(20, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR")  # Regular tiling case
-process_graph(20, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  # Regular tiling case
-
-
+process_graph(10, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR") 
+process_graph(10, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID") 
+process_graph(20, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR") 
+process_graph(20, RegularTilling.SQUARE_GRID, is_grid=True, label="RegularTilling.SQUARE_GRID")  
 
 
