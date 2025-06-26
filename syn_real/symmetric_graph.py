@@ -23,10 +23,6 @@ from collections import Counter
 # %%
 import networkx as nx
 import pynauty
-
-# %%
-import networkx as nx
-import pynauty
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools

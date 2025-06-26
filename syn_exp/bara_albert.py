@@ -802,9 +802,9 @@ def main():
         for i, ov in zip(G.nodes(), orbits):
                 custom_labels[i] = f"{ov}"
 
-        from syn_real.results.mot import count_orbit_edges, count_automorphic_edges
-        from syn_real.disjoint_real import hash_links_by_orbit, count_automorphic_edges
-        from syn_real.measure import analyze_automorphisms, hash_links_by_orbit
+        # from syn_real.results.mot import count_orbit_edges, count_automorphic_edges
+        # from syn_real.disjoint_real import hash_links_by_orbit, count_automorphic_edges
+        # from syn_real.measure import analyze_automorphisms, hash_links_by_orbit
         count_orbit_edges(G, orbits)
         hash_links_by_orbit(G, orbits)
         count_automorphic_edges(G, orbits)

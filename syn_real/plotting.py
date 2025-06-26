@@ -104,6 +104,27 @@ def plot_triangular_graph(G,
 
 
 
+def plot_unique_edge_class(edge_class_counts: dict):
+    unique_orbit_seq = sorted(edge_class_counts.values(), reverse=True)
+    print(f"Edge class counts: {unique_orbit_seq[:10]}")
+    print(f"Unique Edge classes: {len(edge_class_counts.keys())}")
+
+    plt.figure()
+    markerline, stemlines, _ = plt.stem(
+        unique_orbit_seq,
+        markerfmt='bo',
+        basefmt=' '
+    )
+    markerline.set_markerfacecolor('none')
+    stemlines.set_linewidth(0.5)
+    plt.title('Automorphic Edge Distribution')
+    plt.xlabel("Automorphism Edge Classes")
+    plt.ylabel("Frequency")
+    plt.tight_layout()
+    plt.show()
+    
+    
+
 
 # %%
 def plot_orbit_histogram(orbits):

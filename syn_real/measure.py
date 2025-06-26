@@ -205,7 +205,7 @@ def hash_links_by_orbit(G: nx.Graph, orbits: list ):
         edge_classes: list of (orbit_a, orbit_b) tuples in the same order as G.edges()
     """
 
-    node_to_orbit = orbits# .tolist()
+    node_to_orbit = orbits.tolist()
     edge_class_counts = defaultdict(int)
     edge_classes = []
 
@@ -224,27 +224,13 @@ def hash_links_by_orbit(G: nx.Graph, orbits: list ):
                 key = tuple(sorted((orbit_u, orbit_v)))
                 edge_class_counts[key] += 1
                 edge_classes.append(key)    
+    edge_role_size = sorted(list(edge_class_counts.values()), reverse=True)
+    return edge_class_counts, edge_role_size
+
+
+
+
     
-    unique_orbit_seq = sorted(edge_class_counts.values(), reverse=True)
-    print(f"Edge class counts: {unique_orbit_seq[:10]}")
-    print(f"Unique Edge classes: {len(edge_class_counts.keys())}")
-
-    plt.figure()
-    markerline, stemlines, _ = plt.stem(
-        unique_orbit_seq,
-        markerfmt='bo',
-        basefmt=' '
-    )
-    markerline.set_markerfacecolor('none')
-    stemlines.set_linewidth(0.5)
-    plt.title('Automorphic Edge Distribution')
-    plt.xlabel("Automorphism Edge Classes")
-    plt.ylabel("Frequency")
-    plt.tight_layout()
-    plt.show()
-    return edge_class_counts, edge_classes
-
-
 
 import itertools
 def count_automorphic_edges(G, node_groups):
