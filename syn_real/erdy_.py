@@ -32,7 +32,7 @@ import wandb
 #                                     get_graph_orbits,
 #                                     add_random_edges,
 #                                     plot_graph_with_orbits)
-from syn_real.disjoint_syn import (create_disjoint_graph,
+from syn_real.measure import (create_disjoint_graph,
                                     get_graph_orbits,
                                     add_random_edges,
                                     plot_graph_with_orbits)

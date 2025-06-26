@@ -8,14 +8,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
-import torch
-from torch import Tensor
-from scipy.sparse.linalg import eigsh
-from scipy.stats import qmc
-from typing import Optional
-from torch_geometric.datasets import Planetoid
-from torch_geometric.nn import WLConv
-from torch_geometric.typing import Adj
 from torch_geometric.utils import (
     degree,
     is_sparse,
@@ -36,7 +28,6 @@ from collections import Counter
 from syn_graph.syn_random import init_regular_tilling
 from syn_graph.graph_generation import (generate_graph, 
                                         plot_triangular_graph)
-from syn_real.custom_wl import WLConvOptimized
 
 # %%
 
@@ -83,87 +74,6 @@ def plot_orbit_dist(node_groups):
     plt.close()
 
 
-# %%
-def plot_orbit(orbits):
-    plt.figure(figsize=(6, 4))
-    plt.hist(orbits, bins=range(min(orbits), max(orbits) + 2), align='left', rwidth=0.8)
-    plt.xlabel('Orbit Label')
-    plt.ylabel('Frequency')
-    plt.title('Histogram of Orbit Labels')
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.show()
-    # plt.savefig(f"{name}_distribution_d{depth}.pdf")
-    plt.close()
-
-
-# %%
-
-def compute_automorphism_metrics(orbits, num_nodes):
-    """
-    Computes numerical metrics for graph automorphism based on WL node grouping.
-    Args:
-        node_groups (dict): Dictionary mapping WL hash values to lists of node indices.
-        num_nodes (int): Total number of nodes in the graph.
-
-    Returns:
-        dict: Automorphism metrics {A_r1, C_auto, H_auto}
-    """
-    # Compute the size of each group (how many nodes share the same WL label)
-    node_groups = {}
-    for node, label in enumerate(orbits):
-        if label not in node_groups:
-            node_groups[label] = []
-        node_groups[label].append(node)
-        
-    group_sizes = np.array([len(group) for group in node_groups.values()])
-
-    A_r1 = np.sum(group_sizes**2) / num_nodes**2
-    C_auto = len(node_groups)
-    A_r_norm_1 = 1 + np.log(A_r1) / np.log(num_nodes) # lower is less automorphism
-    A_r_norm_2 = np.log(np.sum(group_sizes**2)) / (2 * np.log(num_nodes)) 
-    A_r_log = (np.log(np.sum(group_sizes**2)) - np.log(num_nodes**2)) / np.log(num_nodes)
-    automorphism_score = (len(node_groups) / num_nodes)
-    return {
-        "Automorphism Ratio (A_r1)": A_r1,
-        "A_r_norm_2": A_r_norm_2,
-        "A_r_norm_1": A_r_norm_1,
-        "Number of Unique Groups (C_auto)": C_auto,
-        "Automorphism Ratio (A_r_log)": A_r_log,
-        "num_nodes": num_nodes,
-        "automorphism_score": automorphism_score
-    }, num_nodes, group_sizes
-
-
-# %%
-def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
-    """
-    Runs the Weisfeiler-Lehman (WL) test and groups nodes with similar hashed labels.
-    
-    Args:
-        edge_index (Tensor): The edge index tensor (2, |E|) representing the graph.
-        num_nodes (int): The number of nodes in the graph.
-        num_iterations (int): Number of WL iterations.
-    
-    Returns:
-        node_groups (dict): Mapping from WL hashes to node sets.
-        node_labels (Tensor): Final hashed labels for each node.
-    """
-    wl = WLConvOptimized()  
-
-    node_labels = np.ones(num_nodes)
-    for _ in range(num_iterations):
-        node_labels = wl(node_labels, edge_index)  
-    # Group nodes based on final hashed values
-    node_groups = {}
-    for node, label in enumerate(node_labels.tolist()):
-        if label not in node_groups:
-            node_groups[label] = []
-        node_groups[label].append(node)
-    _, new_labels = torch.unique(node_labels, return_inverse=True)
-    return node_groups, node_labels, new_labels
-
-
-
 
 def count_orbit_edges(G, node_groups):
     # Create a mapping: node -> orbit_id
@@ -190,7 +100,6 @@ def count_orbit_edges(G, node_groups):
     return intra_orbit_edges, inter_orbit_edges
 
 
-
 def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
     print(f"Processing graph of type {graph_type} with {N} nodes")
     if graph_type == RegularTilling.SQUARE_GRID:
@@ -215,13 +124,14 @@ def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
 
         plot_graph_with_orbits(G, pos, orbits, custom_labels=custom_labels, figsize=(8, 6), cmap='tab20b')
         plot_orbit_dist(node_groups)
-        plot_orbit(orbits)
+        plot_orbit_histogram(orbits)
     except:
         # Visualiz  e with WL-based coloring
         plot_triangular_graph(G, orbits, custom_labels=node_labels, figsize=(8, 6), cmap='tab20b')
         plot_orbit_dist(node_groups)
-        plot_orbit(orbits)
+        plot_orbit_histogram(orbits)
     # save_metrics(metrics, f"{graph_type}_{N}", csv_path='summary.csv'
+
 
 
 if __name__ == "__main__":    

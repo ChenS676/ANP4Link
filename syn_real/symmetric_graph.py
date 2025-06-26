@@ -24,25 +24,6 @@ from collections import Counter
 import networkx as nx
 import pynauty
 
-def get_graph_orbits(graph: nx.Graph) -> list:
-    # Map nodes to consecutive indices
-    node_mapping = {node: idx for idx, node in enumerate(graph.nodes())}
-    
-    # Create adjacency dictionary with remapped indices
-    adj_dict = {
-        node_mapping[node]: [node_mapping[neighbor] for neighbor in graph.neighbors(node)]
-        for node in graph.nodes()
-    }
-    
-    # Construct pynauty graph
-    n = len(graph.nodes())
-    G_pynauty = pynauty.Graph(number_of_vertices=n, adjacency_dict=adj_dict, directed=False)
-    
-    # Compute orbits
-    _, _, _, orbits, num_orbit = pynauty.autgrp(G_pynauty)
-    
-    return orbits, num_orbit
-
 # %%
 import networkx as nx
 import pynauty

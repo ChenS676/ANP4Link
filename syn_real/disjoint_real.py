@@ -22,21 +22,18 @@ from torch_geometric.utils import (
     train_test_split_edges,
     to_undirected
 )
-from syn_real.disjoint_syn import (create_disjoint_graph,
-                                    get_graph_orbits,
-                                    add_random_edges,
-                                    plot_graph_with_orbits)
-
 from torch_geometric.data import Data
-from syn_real.disjoint_syn import (semi_autom_expt,
-                                   hash_links_by_orbit)
-from syn_real.mot import (
-    run_wl_test_and_group_nodes,
-    compute_automorphism_metrics,
-    count_orbit_edges,
-    plot_orbit,
-    plot_triangular_graph
-)
+
+
+from syn_real.custom_wl import (get_graph_orbits,
+                                run_wl_test_and_group_nodes)
+from syn_real.plotting import plot_graph_with_orbits
+from syn_real.measure import (hash_links_by_orbit, 
+                              compute_automorphism_metrics,
+                              count_automorphic_edges
+                            )
+from syn_real.auto_operation import (create_disjoint_graph,
+                            add_random_edges)
 from collections import Counter
 
 # %%
@@ -107,37 +104,19 @@ def plot_orbit_dist(node_groups):
 
 
 
-def count_automorphic_edges(G, node_groups):
-    """
-    Counts intra-orbit and inter-orbit edges in a graph G based on node_groups,
-    excluding nodes that are the only ones in their group.
-
-    Parameters:
-        G (networkx.Graph): The input graph.
-        node_groups (list): A list where the index is the node ID and the value is the orbit/group ID.
-
-    Returns:
-        tuple: (intra_orbit_edges, inter_orbit_edges)
-    """
-    group_counts = Counter(node_groups)
-    valid_nodes = {i for i, group in enumerate(node_groups) if group_counts[group] == 1}
-
-    # print(f"unique orbit node: {len(valid_nodes)}")
-    intra_orbit_edges = 0
-    inter_orbit_edges = 0
-    for u, v in itertools.product(G.nodes(), G.nodes()):
-        if u in valid_nodes and v in valid_nodes:
-            continue 
-        # print(f"u: {u}, v: {v}, group_u: {node_groups[u]}, group_v: {node_groups[v]}")
-        if node_groups[u] == node_groups[v]:
-            intra_orbit_edges += 1
-        else:
-            inter_orbit_edges += 1
-    print(f"Intra-orbit edges: {intra_orbit_edges}, Inter-orbit edges: {inter_orbit_edges}")
-    print(f"Non-distinguishable edges: {(intra_orbit_edges+inter_orbit_edges)}")
-    return intra_orbit_edges, inter_orbit_edges
-
-
+def plot_orbit(orbits):
+    plt.figure(figsize=(6, 4))
+    plt.hist(orbits, bins=range(min(orbits), max(orbits) + 2), align='left', rwidth=0.8)
+    plt.xlabel('Orbit Label')
+    plt.ylabel('Frequency')
+    plt.title('Orbit Distribution')
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.show()
+    # plt.savefig(f"{name}_distribution_d{depth}.pdf")
+    plt.close()
+    
+    
+    
 def analyze_automorphisms(G):
 
     _, node_labels, orbits = run_wl_test_and_group_nodes(data.edge_index, num_nodes=data.num_nodes, num_iterations=100)

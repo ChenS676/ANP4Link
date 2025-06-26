@@ -43,8 +43,22 @@ from syn_graph.syn_random import init_regular_tilling
 from syn_graph.graph_generation import generate_graph
 import matplotlib.pyplot as plt
 import networkx as nx
-from syn_real.custom_wl import WLConvOptimized, WLConvMultiFeature, WLConvMultiFeature, WLConvOptimized
-from syn_real.disjoint_real import plot_orbit_dist, plot_orbit, hash_links_by_orbit
+
+from syn_real.custom_wl import (get_graph_orbits,
+                                run_wl_test_and_group_nodes)
+from syn_real.plotting import (plot_graph_with_orbits, 
+                            plot_orbit,
+                            plot_orbit_histogram,
+                            plot_triangular_graph
+                            )
+from syn_real.custom_wl import WLConvOptimized
+from syn_real.measure import (hash_links_by_orbit, 
+                              compute_automorphism_metrics,
+                              count_automorphic_edges,
+                              create_disjoint_graph,
+                              count_orbit_edges,
+                                    add_random_edges,
+                                    )
 
 # %%
 def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
@@ -74,6 +88,8 @@ def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
         node_groups[label].append(node)
     _, new_labels = torch.unique(node_labels, return_inverse=True)
     return node_groups, node_labels, new_labels
+
+
 
 # %%
 def plot_graph_with_orbits(G, pos, orbits, custom_labels=None, figsize=(8, 6), cmap='tab20b'):
@@ -108,6 +124,8 @@ def plot_graph_with_orbits(G, pos, orbits, custom_labels=None, figsize=(8, 6), c
     plt.show()
     plt.close()
 
+
+
 # %%
 def plot_orbit_histogram(orbits, figsize=(6, 4)):
     """
@@ -128,6 +146,8 @@ def plot_orbit_histogram(orbits, figsize=(6, 4)):
     plt.grid(axis='y', linestyle='--', alpha=0.7)
     plt.show()
     plt.close()
+
+
 
 # %%
 def compute_automorphism_metrics(node_groups, num_nodes):
@@ -159,6 +179,8 @@ def compute_automorphism_metrics(node_groups, num_nodes):
         "num_nodes": num_nodes,
         "automorphism_score": automorphism_score
     }, num_nodes, group_sizes
+
+
 
 # %%
 def count_automorphic_edges(G, node_groups:list):
@@ -386,7 +408,7 @@ def count_orbit_edges(G, node_groups):
                     intra_orbit_edges += 1
                 else:
                     inter_orbit_edges += 1
-    # print(f"Intra-orbit edges: {intra_orbit_edges}, Inter-orbit edges: {inter_orbit_edges}")
+    print(f"Intra-orbit edges: {intra_orbit_edges}, Inter-orbit edges: {inter_orbit_edges}")
     print(f"{inter_orbit_edges/ (intra_orbit_edges + inter_orbit_edges) * 100}%, of edges are inter-orbit")
     return intra_orbit_edges, inter_orbit_edges
 
@@ -413,12 +435,11 @@ def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
     custom_labels = {}
     for i, ov in zip(G.nodes(), orbits):
             custom_labels[i] = f"{ov}"
-            
+
+    plot_orbit(orbits)      
     plot_degree_distribution_stem(G)
     count_orbit_edges(G, orbits)
-    
-    # plot_orbit_dist(orbits)
-    plot_orbit(orbits)
+
 
     hash_links_by_orbit(G, orbits)
     plot_graph_with_orbits(G, 
@@ -426,6 +447,8 @@ def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
                            orbits, 
                            custom_labels=custom_labels, 
                            figsize=(8, 6), cmap='tab20b')
+    
+    
     # save_metrics(metrics, f"{graph_type}_{N}", csv_path='summary.csv')
 
 

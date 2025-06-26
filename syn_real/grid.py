@@ -28,7 +28,7 @@ import argparse
 from torch_sparse import SparseTensor
 from torch.utils.data import DataLoader
 import wandb
-from syn_real.disjoint_syn import (create_disjoint_graph,
+from syn_real.measure import (create_disjoint_graph,
                                     get_graph_orbits,
                                     add_random_edges,
                                     plot_graph_with_orbits)
@@ -788,14 +788,14 @@ def main():
         graph = from_networkx(G)
         
         _, _, orbits = run_wl_test_and_group_nodes(graph.edge_index, num_nodes=graph.num_nodes, num_iterations=100)
-        from syn_real.disjoint_syn import get_regular_orbit_labels
+        from syn_real.measure import get_regular_orbit_labels
         orbits, num_orbit = get_regular_orbit_labels(G)
         try:
             print(f"Number of orbits: {num_orbit}/{G.number_of_nodes()}={num_orbit/G.number_of_nodes()})")
         except NameError:
             num_orbit = len(set(orbits.tolist()))
             print(f"Number of orbits: {num_orbit}/{G.number_of_nodes()}={num_orbit/G.number_of_nodes()})")
-        from syn_real.disjoint_syn import (analyze_automorphisms, 
+        from syn_real.measure import (analyze_automorphisms, 
                                             count_orbit_edges, 
                                             hash_links_by_orbit)
         count_orbit_edges(G, orbits)
