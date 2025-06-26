@@ -414,48 +414,33 @@ def hash_links_by_orbit(G: nx.Graph, orbits: list ):
     except:
         for links in G.edges():
             for u, v in links:
-                orbit_u = node_to_orbit[u]
-                orbit_v = node_to_orbit[v]
+                orbit_u = node_to_orbit[u].item()
+                orbit_v = node_to_orbit[v].item()
                 key = tuple(sorted((orbit_u, orbit_v))) 
                 edge_class_counts[key] += 1
-                edge_classes.append(key)
-    print(f"Edge class counts: {sorted(edge_class_counts.values())[-10:]}")
-    print(f"Unique Edge classes: {len(set(edge_classes))}")
-    visualize_orbit_adjacency_matrix(edge_class_counts)
+                edge_classes.append(key)    
+                
+    unique_orbit_seq = sorted(edge_class_counts.values(), reverse=True)
+    print(f"Edge class counts: {unique_orbit_seq[-10:]}")
+    print(f"Unique Edge classes: {len(edge_classes.keys())}")
+
+    plt.figure()
+    markerline, stemlines, _ = plt.stem(
+        unique_orbit_seq,
+        markerfmt='bo',
+        basefmt=' '
+    )
+    markerline.set_markerfacecolor('none')
+    stemlines.set_linewidth(0.5)
+
+    plt.xlabel("Automorphism Edge Classes")
+    plt.ylabel("Frequency")
+    plt.tight_layout()
+    plt.show()
     return edge_class_counts, edge_classes
 
 
 # %% 
-
-
-def visualize_orbit_adjacency_matrix(edge_class_counts):
-    # Extract all unique orbit IDs
-    orbit_ids = sorted(set(i for edge in edge_class_counts for i in edge))
-    orbit_to_idx = {orbit: idx for idx, orbit in enumerate(orbit_ids)}
-    n = len(orbit_ids)
-
-    # Initialize matrix
-    mat = np.zeros((n, n), dtype=int)
-
-    # Fill matrix
-    for (a, b), count in edge_class_counts.items():
-        i, j = orbit_to_idx[a], orbit_to_idx[b]
-        mat[i, j] += count
-        mat[j, i] += count if i != j else 0  # symmetric, avoid double-counting diagonals
-
-    # Plot heatmap
-    plt.figure(figsize=(6, 5))
-    plt.imshow(mat, cmap='Blues', interpolation='nearest')
-    plt.title('Orbit Adjacency Matrix')
-    plt.xlabel('Orbit ID')
-    plt.ylabel('Orbit ID')
-    plt.xticks(range(n), orbit_ids)
-    plt.yticks(range(n), orbit_ids)
-    plt.colorbar(label='Edge Count')
-    plt.tight_layout()
-    # plt.savefig('orbit_adjacency_matrix.pdf', dpi=300)
-    plt.show()
-
 
 
 def semi_autom_expt(G, pos=None):
