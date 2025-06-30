@@ -1,23 +1,33 @@
+# === Standard Library ===
 import os
 import sys
-sys.path.insert(0, '/hkfs/work/workspace/scratch/cc7738-automorphism/ANP4Link/')
-import os
-import sys
+import copy
 import random
 import argparse
+from collections import Counter
+current_file = os.path.abspath(__file__)
+grandparent_dir = os.path.dirname(os.path.dirname(current_file))
+sys.path.insert(0, grandparent_dir)
 import numpy as np
-import torch
-import networkx as nx
-import matplotlib.pyplot as plt
+import pandas as pd
 import scipy.sparse as sp
-from torch_sparse import SparseTensor
+import torch
+from torch import Tensor
+from torch.utils.data import DataLoader
 from torch_geometric.data import Data
 from torch_geometric.datasets import Planetoid
 from torch_geometric.utils import (
-    to_networkx
+    to_networkx,
+    to_undirected,
+    train_test_split_edges
 )
-from torch import Tensor
-from collections import Counter
+from torch_sparse import SparseTensor
+from ogb.linkproppred import Evaluator, PygLinkPropPredDataset
+import matplotlib.pyplot as plt
+import networkx as nx
+import wandb
+
+from syn_real.utils import get_git_root
 from baselines.gnn_utils import (GCN, 
                                  GAT, 
                                  SAGE, 
@@ -31,21 +41,6 @@ from baselines.gnn_utils import (GCN,
                                  dot_product, 
                                  ChebGCN, 
                                  MixHopGCN)
-
-import matplotlib.pyplot as plt
-import networkx as nx
-import pandas as pd
-from torch_geometric.utils import train_test_split_edges, to_undirected
-import copy
-import torch
-import argparse
-from torch_sparse import SparseTensor
-from torch_geometric.datasets import Planetoid 
-from ogb.linkproppred import Evaluator, PygLinkPropPredDataset
-from torch.utils.data import DataLoader
-import wandb
-
-
 from syn_real.gnn_utils  import evaluate_hits, evaluate_auc, evaluate_mrr
 from syn_real.gnn_utils import (
     get_root_dir, 
@@ -54,6 +49,7 @@ from syn_real.gnn_utils import (
     Logger, 
     init_seed
 )
+
 from baselines.gnn_utils import (get_root_dir, 
                                  get_logger, 
                                  get_config_dir, 
