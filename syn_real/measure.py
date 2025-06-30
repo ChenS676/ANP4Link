@@ -204,8 +204,9 @@ def hash_links_by_orbit(G: nx.Graph, orbits: list ):
         edge_class_counts: dict with keys (orbit_a, orbit_b), values are counts
         edge_classes: list of (orbit_a, orbit_b) tuples in the same order as G.edges()
     """
-
-    node_to_orbit = orbits.tolist()
+    if type(orbits) is torch.Tensor:
+        orbits = orbits.tolist()
+    node_to_orbit = orbits
     edge_class_counts = defaultdict(int)
     edge_classes = []
 
@@ -217,10 +218,11 @@ def hash_links_by_orbit(G: nx.Graph, orbits: list ):
             edge_class_counts[key] += 1
             edge_classes.append(key)
     except:
+        # regular graph
         for links in G.edges():
             for u, v in links:
-                orbit_u = node_to_orbit[u].item()
-                orbit_v = node_to_orbit[v].item()
+                orbit_u = node_to_orbit[u]
+                orbit_v = node_to_orbit[v]
                 key = tuple(sorted((orbit_u, orbit_v)))
                 edge_class_counts[key] += 1
                 edge_classes.append(key)    
