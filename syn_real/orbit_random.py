@@ -490,7 +490,6 @@ def plot_orbit_analysis(G, pos, orbits, figsize=(18, 6)):
     plt.tight_layout()
     plt.show()
 
-
 # %%
 def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
     if graph_type == RegularTilling.SQUARE_GRID:
@@ -513,71 +512,50 @@ def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
     for i, ov in zip(G.nodes(), orbits):
             custom_labels[i] = f"{ov}"
 
-    # 1) set up a single figure with 3 subplots
-    fig, axes = plt.subplots(1, 4, figsize=(18, 6))
-
-    # ----- subplot 1: Graph with orbits -----
-    ax = axes[0]
-    node_colors = [orbits[node] for node in G.nodes()]
-    nx.draw(
-        G,
-        pos=pos,
-        labels=custom_labels,
-        node_color=node_colors,
-        cmap='tab20b',
-        node_size=500,
-        font_weight='bold',
-        edgecolors='black',
-        ax=ax           # draw onto this axis
-    )
-    ax.set_title("Graph Colored by Orbit Labels")
-
-
     # 4a. Quick-and-dirty: all four plots at once
     plot_orbit_analysis(G, pos, orbits)
-
-    # 4b. Or, mix-and-match subplots yourself:
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    labels = create_orbit_labels(G, orbits)
-
-    # Panel 1: graph colored by orbits
-    plot_colored_graph(G, pos, labels, orbits, axes[0])
-
-    # Panel 2: just the degree distribution
-    plot_degree_distribution(G, axes[1])
-
-    plt.tight_layout()
-    plt.show()
-
-    # save_metrics(metrics, f"{graph_type}_{N}", csv_path='summary.csv')
+    return G
 
 # %%
-process_graph(10, GraphType.BARABASI_ALBERT)
-process_graph(20, GraphType.TREE)
-process_graph(10, GraphType.TREE)
+for N in range(3, 40, 1):
+    G = process_graph(N, GraphType.BARABASI_ALBERT)
+    
 
-process_graph(10, GraphType.ERDOS_RENYI)
-process_graph(10, GraphType.RANDOM)
-# Two Extreme Cases:
-process_graph(10, 'GraphType.COMPLETE', is_grid=True, label="GraphType.COMPLETE")  # Regular tiling case
+# %%
+for N in range(4, 40, 10):
+    process_graph(N, GraphType.TREE)
 
+# %%
+for N in range(4, 40, 1):
+    process_graph(N, GraphType.ERDOS_RENYI)
+
+# %%
+for N in range(4, 40, 1):
+    process_graph(N, GraphType.RANDOM)
+
+# %%
+for N in range(4, 40, 10):
+    process_graph(10, 'GraphType.COMPLETE', is_grid=True, label="GraphType.COMPLETE")  # Regular tiling case
 
 
 # %%
-process_graph(100, GraphType.STAR)
-process_graph(20, GraphType.LADDER)
-process_graph(20, GraphType.LINE)
-process_graph(20, GraphType.CATERPILLAR)
-process_graph(20, GraphType.LOBSTER)
-
-
-
+for N in range(4, 40, 10):
+    process_graph(N, GraphType.STAR)
 
 # %%
-process_graph(100, GraphType.STAR)
-process_graph(200, GraphType.LADDER)
-process_graph(200, GraphType.LINE)
-process_graph(200, GraphType.CATERPILLAR)
-process_graph(200, GraphType.LOBSTER)
+for N in range(4, 40, 10):
+    process_graph(N, GraphType.LADDER)
+
+# %%
+for N in range(4, 40, 10):
+    process_graph(N, GraphType.LINE)
+
+# %%
+for N in range(4, 40, 10):
+    process_graph(N, GraphType.CATERPILLAR)
+
+# %%
+for N in range(4, 40, 10):
+    process_graph(N, GraphType.LOBSTER)
 
 
