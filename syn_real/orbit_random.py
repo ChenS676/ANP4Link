@@ -9,7 +9,9 @@ import sys
 from collections import Counter
 
 # Add project path
-sys.path.insert(0, '/hkfs/work/workspace/scratch/cc7738-automorphism/ANP4Link')
+current_file = os.path.abspath(__file__)
+grandparent_dir = os.path.dirname(os.path.dirname(current_file))
+sys.path.insert(0, grandparent_dir)
 
 # Third-party libraries
 import matplotlib.pyplot as plt

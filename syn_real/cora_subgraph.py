@@ -1,6 +1,6 @@
 import os
 import sys
-sys.path.insert(0, '/hkfs/work/workspace/scratch/cc7738-automorphism/ANP4Link/')
+sys.path.insert(0, '/pfs/work9/workspace/scratch/ka_cc7738-orbit-gnn/ANP4Link')
 import os
 import sys
 import random
