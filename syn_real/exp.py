@@ -904,7 +904,7 @@ def main():
     init_seed(args.seed)
 
 
-    folder = '/hkfs/work/workspace/scratch/cc7738-automorphism/ANP4Link/saved_graphs/BARABASI_ALBERT'
+    folder = f'{grandparent_dir}/saved_graphs/BARABASI_ALBERT'
     for gpath in os.listdir(folder):
         full_path = os.path.join(folder, gpath)
         print(f"Loading: {full_path}")
