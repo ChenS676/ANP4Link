@@ -46,11 +46,11 @@ import networkx as nx
 
 from syn_real.custom_wl import (get_graph_orbits,
                                 run_wl_test_and_group_nodes)
-from syn_real.plotting import (plot_graph_with_orbits, 
-                            plot_orbit_dist,
-                            plot_orbit_histogram,
-                            plot_triangular_graph
-                            )
+# from syn_real.plotting import (plot_graph_with_orbits, 
+#                             plot_orbit_dist,
+#                             plot_orbit_histogram,
+#                             plot_triangular_graph
+#                             )
 from syn_real.custom_wl import WLConvOptimized
 from syn_real.measure import (hash_links_by_orbit, 
                               compute_automorphism_metrics,
@@ -89,7 +89,7 @@ def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
 
 
 # %%
-def plot_graph_with_orbits(G, pos, orbits, custom_labels=None, figsize=(8, 6), cmap='tab20b', ax=None):
+def plot_graph_with_orbits(G, pos, orbits, custom_labels=None, ax=None):
     """
     Plots a NetworkX graph with node coloring based on orbit labels.
     
@@ -110,10 +110,11 @@ def plot_graph_with_orbits(G, pos, orbits, custom_labels=None, figsize=(8, 6), c
         pos=pos,
         labels=custom_labels,
         node_color=node_colors,
-        cmap=cmap,
+        cmap='tab20b',
         node_size=500,
         font_weight='bold',
-        edgecolors='black'
+        edgecolors='black',
+        ax=ax
     )
     ax.set_title("Graph Colored by Orbit Labels")
     # plt.savefig('graph_with_orbits.png', bbox_inches='tight')
@@ -121,7 +122,7 @@ def plot_graph_with_orbits(G, pos, orbits, custom_labels=None, figsize=(8, 6), c
 
 
 # %%
-def plot_orbit_histogram(orbits, figsize=(6, 4), ax=None):
+def plot_orbit_histogram(orbits, ax=None):
     """
     Plots a histogram of orbit label frequencies.
     
@@ -258,7 +259,6 @@ def plot_degree_distribution_stem(G, ax=None):
 
     ax.set_xlabel("Degree")
     ax.set_ylabel("Frequency")
-
 
 # %%
 def dataloader(args):
@@ -406,6 +406,7 @@ def plot_edge_distribution(G, orbits, ax):
     """
     Plot the automorphic edge class distribution as a stem plot.
     """
+
     _, edge_class_counts = hash_links_by_orbit(G, orbits)
     markerline, stemlines, _ = ax.stem(edge_class_counts, markerfmt='bo', basefmt=' ')
     markerline.set_markerfacecolor('none')
@@ -413,7 +414,6 @@ def plot_edge_distribution(G, orbits, ax):
     ax.set_title('Automorphic Edge Distribution')
     ax.set_xlabel("Automorphism Edge Classes")
     ax.set_ylabel("Frequency")
-
 
 # %%
 def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
@@ -439,21 +439,73 @@ def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
 
     if type(orbits) is torch.Tensor:
         orbits = orbits.tolist()
+        
     labels = {node: str(orbits[idx]) for idx, node in enumerate(G.nodes())}
     fig, axes = plt.subplots(1, 4, figsize=(18, 6))
+    
+    pos = nx.spring_layout(G, seed=42)
+    
+    # plot_graph_with_orbits(G, 
+    #                        pos, 
+    #                        orbits, 
+    #                        custom_labels=custom_labels, 
+    #                        ax=axes[0])  
+    
+    try:
+        node_colors = [orbits[node] for node in G.nodes()]
+    except:
+        node_colors = [orbits[i] for i, node in enumerate(G.nodes())]
+    nx.draw(
+        G,
+        pos=pos,
+        labels=custom_labels,
+        node_color=node_colors,
+        cmap='tab20b',
+        node_size=500,
+        font_weight='bold',
+        edgecolors='black',
+        ax=axes[0]
+    )
+    axes[0].set_title("Graph Colored by Orbit Labels")
+    
+    # plot_degree_distribution_stem(G, ax=axes[1])
+    degrees = [d for _, d in G.degree()]
+    degrees = sorted(degrees, reverse=True)
 
-    plot_graph_with_orbits(G, 
-                           None, 
-                           orbits, 
-                           custom_labels=custom_labels, 
-                           figsize=(8, 6), 
-                           ax=axes[0])  
-    plot_degree_distribution_stem(G, axes[1])
-    plot_orbit_histogram(orbits, ax=axes[2])    
-    plot_edge_distribution(G, orbits, ax=axes[3])
+    markerline, stemlines, _ = plt.stem(
+        degrees,
+        markerfmt='bo',
+        basefmt=' '
+    )
+    markerline.set_markerfacecolor('none')
+    stemlines.set_linewidth(0.5)
 
+    axes[1].set_xlabel("Degree")
+    axes[1].set_ylabel("Frequency")
+    
+    # plot_orbit_histogram(orbits, ax=axes[2])   
+    axes[2].hist(orbits,
+             bins=range(min(orbits), max(orbits) + 2),
+             align='left',
+             rwidth=0.8)
+    axes[2].set_xlabel('Orbit Label')
+    axes[2].set_ylabel('Frequency')
+    axes[2].set_title('Histogram of Orbit Labels')
+    axes[2].grid(axis='y', linestyle='--', alpha=0.7)
+
+    
+    _, edge_class_counts = hash_links_by_orbit(G, orbits)
+    markerline, stemlines, _ = ax.stem(edge_class_counts, markerfmt='bo', basefmt=' ')
+    markerline.set_markerfacecolor('none')
+    stemlines.set_linewidth(0.5)
+    axes[3].set_title('Automorphic Edge Distribution')
+    axes[3].set_xlabel("Automorphism Edge Classes")
+    axes[3].set_ylabel("Frequency")
+    
+    # plot_edge_distribution(G, orbits, ax=axes[3])
+    plt.tight_layout()
+    plt.show()
     # save_metrics(metrics, f"{graph_type}_{N}", csv_path='summary.csv')
-
 
 # %%
 process_graph(10, RegularTilling.TRIANGULAR, is_grid=True, label="RegularTilling.TRIANGULAR") 
