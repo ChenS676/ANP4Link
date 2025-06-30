@@ -517,10 +517,34 @@ def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
     return G
 
 # %%
-for N in range(3, 40, 1):
-    G = process_graph(N, GraphType.BARABASI_ALBERT)
-    
+import os
+import torch
+from torch_geometric.utils import from_networkx
 
+# Assume process_graph and GraphType are already defined
+import os
+import shutil
+
+import os
+current_dir = os.getcwd()
+print("Current working directory:", current_dir)
+save_dir = 'saved_graphs/BARABASI_ALBERT'
+
+# If the directory exists, remove it
+if os.path.exists(save_dir):
+    shutil.rmtree(save_dir)
+
+# Create a fresh directory
+os.makedirs(save_dir)
+for N in range(2000, 4000, 100):
+    G = generate_graph(N, GraphType.BARABASI_ALBERT, seed=0)
+    # G = process_graph(N, GraphType.BARABASI_ALBERT)
+    data = from_networkx(G)
+    file_path = os.path.join(save_dir, f'BARABASI_ALBERT_{N}.pt')
+    print(file_path)
+    torch.save(data, file_path)
+    
+exit(-1)
 # %%
 for N in range(4, 40, 10):
     process_graph(N, GraphType.TREE)

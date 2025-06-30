@@ -1,7 +1,6 @@
-# %%
 import os
 import sys
-sys.path.insert(0, '/hkfs/work/workspace/scratch/cc7738-automorphism/ANP4Link')
+sys.path.insert(0, '/hkfs/work/workspace/scratch/cc7738-automorphism/ANP4Link/')
 import os
 import sys
 import random
@@ -14,8 +13,11 @@ import scipy.sparse as sp
 from torch_sparse import SparseTensor
 from torch_geometric.data import Data
 from torch_geometric.datasets import Planetoid
-from torch_geometric.utils import k_hop_subgraph, to_networkx
-from syn_graph.graph_generation import GraphType, generate_graph
+from torch_geometric.utils import (
+    to_networkx
+)
+from torch import Tensor
+from collections import Counter
 from baselines.gnn_utils import (GCN, 
                                  GAT, 
                                  SAGE, 
@@ -30,9 +32,7 @@ from baselines.gnn_utils import (GCN,
                                  ChebGCN, 
                                  MixHopGCN)
 
-# %%
 import matplotlib.pyplot as plt
-%matplotlib inline
 import networkx as nx
 import pandas as pd
 from torch_geometric.utils import train_test_split_edges, to_undirected
@@ -44,12 +44,8 @@ from torch_geometric.datasets import Planetoid
 from ogb.linkproppred import Evaluator, PygLinkPropPredDataset
 from torch.utils.data import DataLoader
 import wandb
-from syn_real.disjoint_syn import (create_disjoint_graph,
-                                    get_graph_orbits,
-                                    add_random_edges,
-                                    plot_graph_with_orbits)
 
-# %%
+
 from syn_real.gnn_utils  import evaluate_hits, evaluate_auc, evaluate_mrr
 from syn_real.gnn_utils import (
     get_root_dir, 
@@ -58,18 +54,6 @@ from syn_real.gnn_utils import (
     Logger, 
     init_seed
 )
-from torch_geometric.utils import (
-    degree,
-    is_sparse,
-    scatter,
-    sort_edge_index,
-    to_edge_index,
-    from_networkx,
-    to_networkx,
-    train_test_split_edges,
-    to_undirected
-)
-from syn_graph.graph_generation import generate_graph, GraphType
 from baselines.gnn_utils import (get_root_dir, 
                                  get_logger, 
                                  get_config_dir, 
@@ -78,11 +62,9 @@ from baselines.gnn_utils import (get_root_dir,
                                  save_emb)
 from graphgps.utility.utils import mvari_str2csv
 from syn_real.gnn_ogb_heart import init_seed
-from syn_real.automorphism import (run_wl_test_and_group_nodes, 
-                                   count_automorphic_edges, 
-                                   compute_automorphism_metrics)
+from syn_real.custom_wl import WLConvOptimized, WLConvOptimized
 
-# %% [markdown]
+
 # python real_syn_automorphic.py --data_name Citeseer --gnn_model GCN --lr 0.01 --dropout 0.3 --l2 1e-4 --num_layers 1 --num_layers_predictor 3 --hidden_channels 128 --epochs 9999 --kill_cnt 10 --eval_steps 5 --batch_size 1024 
 # python real_syn_automorphic.py --data_name Cora --gnn_model GCN --lr 0.01 --dropout 0.3 --l2 1e-4 --num_layers 1 --num_layers_predictor 3 --hidden_channels 128 --epochs 9999 --kill_cnt 10 --eval_steps 5 --batch_size 1024 
 # python real_syn_automorphic.py --data_name ogbl-ddi --gnn_model GCN --lr 0.01 --dropout 0.3 --l2 1e-4 --num_layers 1 --num_layers_predictor 3 --hidden_channels 128 --epochs 9999 --kill_cnt 10 --eval_steps 5 --batch_size 1024 
@@ -93,25 +75,133 @@ from syn_real.automorphism import (run_wl_test_and_group_nodes,
 # intra_ratios = [0.5]    # Fixed intra ratio
 # total_edges_list = [0.2, 1, 4, 7, 12, 18, 28]*250 # Will be scaled × 10^3
 
-# %% [markdown]
+
+
 # Citeseer
 # inter_ratios = [0.1] # Try also: 0.1–0.9
 # intra_ratios = [0.5]    # Fixed intra ratio
 # total_edges_list = [0.2, 1, 2, 3, 4, 5, 7, 8, 10, 14] * 1000
 
-# %% [markdown]
+
 # DDI
 # inter_ratios = [0.5]  # Try also: 0.1–0.9
 # intra_ratios = [0.5]    
 # total_edges_list =  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] * 1
 
-# %%
+
 dir_path = get_root_dir()
 log_print = get_logger('testrun', 'log', get_config_dir())
 DATASET_PATH = '/hkfs/work/workspace/scratch/cc7738-rebuttal/Universal-MP/baselines/dataset'
 PT_LIST = [f"plots/Citeseer/processed_graph_inter0.5_intra0.5_edges1000_auto0.7200_norm1_0.7676.pt"]
 
-# %%
+
+
+def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
+    """
+    Runs the Weisfeiler-Lehman (WL) test and groups nodes with similar hashed labels.
+    
+    Args:
+        edge_index (Tensor): The edge index tensor (2, |E|) representing the graph.
+        num_nodes (int): The number of nodes in the graph.
+        num_iterations (int): Number of WL iterations.
+    
+    Returns:
+        node_groups (dict): Mapping from WL hashes to node sets.
+        node_labels (Tensor): Final hashed labels for each node.
+    """
+    # wl = WLConvMultiFeature()  
+    wl = WLConvOptimized()  
+
+    node_labels = np.ones(num_nodes)
+    for _ in range(num_iterations):
+        node_labels = wl(node_labels, edge_index)  
+    # Group nodes based on final hashed values
+    node_groups = {}
+    for node, label in enumerate(node_labels.tolist()):
+        if label not in node_groups:
+            node_groups[label] = []
+        node_groups[label].append(node)
+    _, new_labels = torch.unique(node_labels, return_inverse=True)
+    return node_groups, node_labels, new_labels
+
+
+
+
+def compute_automorphism_metrics(node_groups, num_nodes):
+    """
+    Computes numerical metrics for graph automorphism based on WL node grouping.
+    Args:
+        node_groups (dict): Dictionary mapping WL hash values to lists of node indices.
+        num_nodes (int): Total number of nodes in the graph.
+
+    Returns:
+        dict: Automorphism metrics {A_r1, C_auto, H_auto}
+    """
+    # Compute the size of each group (how many nodes share the same WL label)
+
+    group_sizes = np.array([len(group) for group in node_groups.values()])
+    
+    A_r1 = np.sum(group_sizes**2) / num_nodes**2
+    C_auto = len(node_groups)
+    A_r_norm_1 = 1 + np.log(A_r1) / np.log(num_nodes) # lower is less automorphism
+    A_r_norm_2 = np.log(np.sum(group_sizes**2)) / (2 * np.log(num_nodes)) 
+    A_r_log = (np.log(np.sum(group_sizes**2)) - np.log(num_nodes**2)) / np.log(num_nodes)
+    automorphism_score = (len(node_groups) / num_nodes)
+    return {
+        "Automorphism Ratio (A_r1)": A_r1,
+        "A_r_norm_2": A_r_norm_2,
+        "A_r_norm_1": A_r_norm_1,
+        "Number of Unique Groups (C_auto)": C_auto,
+        "Automorphism Ratio (A_r_log)": A_r_log,
+        "num_nodes": num_nodes,
+        "automorphism_score": automorphism_score
+    }, num_nodes, group_sizes
+
+
+
+def count_automorphic_edges(G, node_groups:list):
+    """
+    Counts intra-orbit and inter-orbit edges in a graph G based on node_groups,
+    excluding nodes that are the only ones in their group.
+
+    Parameters:
+        G (networkx.Graph): The input graph.
+        node_groups (list): A list where the index is the node ID and the value is the orbit/group ID.
+
+    Returns:
+        tuple: (intra_orbit_edges, inter_orbit_edges)
+    """
+    node_groups = node_groups.tolist() if isinstance(node_groups, Tensor) else node_groups
+    group_counts = Counter(node_groups)
+    
+    unique_nodes = set()
+    for i, group in enumerate(node_groups):
+        if group_counts[group] == 1:
+            unique_nodes.add(i)
+
+    valid_nodes = set()
+    for i, group in enumerate(node_groups):
+        if group_counts[group] > 1:
+            valid_nodes.add(i)
+
+    valid_nodes = list(valid_nodes)
+    intra_orbit_edges = 0
+    inter_orbit_edges = 0
+    for u, v in G.edges():
+        # if u in unique_nodes and v in unique_nodes:
+        #     continue 
+        # print(f"u: {u}, v: {v}, group_u: {node_groups[u]}, group_v: {node_groups[v]}")
+        if node_groups[u] == node_groups[v]:
+            intra_orbit_edges += 1
+        else:
+            inter_orbit_edges += 1
+    print(f"Intra-orbit edges: {intra_orbit_edges}, Inter-orbit edges: {inter_orbit_edges}")
+    print(f"Non-distinguishable edges: {(intra_orbit_edges+inter_orbit_edges)}")
+    return intra_orbit_edges, inter_orbit_edges
+
+
+
+
 def remove_random_edges(graph_data, inter_ratio=0.5, intra_ratio=0.5, total_edges=1000):
     """
     Removes random edges from within and between two graph copies in a controlled way.
@@ -161,7 +251,9 @@ def remove_random_edges(graph_data, inter_ratio=0.5, intra_ratio=0.5, total_edge
 
     return Data(edge_index=updated_edge_index, num_nodes=graph_data.num_nodes, x=graph_data.x), removed_edges
 
-# %%
+
+    
+
 def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     """
     Run the experiment with the given parameters.
@@ -198,7 +290,43 @@ def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     print(f"Finished with inter_ratio={inter_ratio}, intra_ratio={intra_ratio}, total_edges={total_edges}")
     return updated_graph_data, metrics_after# , node_groups, node_labels, new_edges
 
-# %%
+    
+from torch_geometric.utils import k_hop_subgraph, to_networkx
+# --- 1️⃣ Load Real-World Graph (Cora) ---
+def load_real_world_graph(dataset_name="Cora"):
+    """
+    Load a real-world graph dataset (e.g., Cora) from PyTorch Geometric.
+    Args:
+        dataset_name (str): The dataset name (default: "Cora").
+    Returns:
+        Data: PyTorch Geometric Data object.
+    """
+    # if dataset_name in ['Cora', 'Citeseer', 'PubMed']:
+    #     dataset = Planetoid(root='/tmp/' + dataset_name, name=dataset_name)
+    #     data = dataset[0]  
+        # data.x = torch.eye(data.num_nodes, dtype=torch.float)
+        # data.x = torch.rand(data.num_nodes, data.num_nodes)
+
+    dataset = Planetoid(root=f'/tmp/{dataset_name}', name=dataset_name)
+    data = dataset[0]
+
+    # Extract k-hop subgraph
+    subset, sub_edge_index, mapping, edge_mask = k_hop_subgraph(
+        node_idx=0,
+        num_hops=5,
+        edge_index=data.edge_index,
+        relabel_nodes=True,
+        num_nodes=data.num_nodes
+    )
+
+    # Create subgraph Data object
+    sub_x = data.x[subset]
+    sub_y = data.y[subset]
+
+    return Data(x=sub_x, edge_index=sub_edge_index, y=sub_y)
+
+
+
 # --- 2️⃣ Create Disjoint Graph Copies & Merge ---
 def create_disjoint_graph(data: Data) -> Data:
     """
@@ -222,7 +350,7 @@ def create_disjoint_graph(data: Data) -> Data:
     print(merged_data.x)
     return merged_data
 
-# %%
+
 # --- 3️⃣ Add Controllable Random Edges ---
 def add_random_edges(graph_data, 
                      inter_ratio=0.5, 
@@ -258,7 +386,7 @@ def add_random_edges(graph_data,
     updated_edge_index = torch.cat([graph_data.edge_index, new_edges], dim=1)
     return Data(edge_index=updated_edge_index, num_nodes=graph_data.num_nodes, x=graph_data.x)
 
-# %%
+
 def plot_group_size_distribution(group_sizes, args, file_name):
     """ 
     Plots the group size distribution with log-log scaling.
@@ -285,8 +413,8 @@ def plot_group_size_distribution(group_sizes, args, file_name):
     plt.title("Group Size Distribution (Log-Log Scale)")
     plt.savefig(file_name)
     plt.close()
+    
 
-# %%
 def plot_histogram_group_size(group_sizes, metrics_before, args):
     """ 
     Plots a histogram of group sizes.
@@ -311,7 +439,8 @@ def plot_histogram_group_size(group_sizes, metrics_before, args):
     # print(f"Saved to {save_path}")
     # print(f"Automorphism fraction before adding random edges: {metrics_before}")
 
-# %%
+
+
 def plot_graph_visualization(graph_data, node_labels, args, save_path):
     """ 
     Plots a general visualization of the graph using WL-based node coloring.
@@ -328,7 +457,7 @@ def plot_graph_visualization(graph_data, node_labels, args, save_path):
     plt.savefig(save_path)
     plt.close()
 
-# %%
+
 def plot_histogram_group_size_log_scale(group_sizes, metrics_before, args, save_path):
     """ 
     Plots a histogram of group sizes with log scale on both axes.
@@ -351,11 +480,11 @@ def plot_histogram_group_size_log_scale(group_sizes, metrics_before, args, save_
     plt.close()
     print(f"Saved to {save_path}")
     print(f"Automorphism fraction before adding random edges: {metrics_before}")
-
-# %%
+    
+    
 def parse_args():
     parser = argparse.ArgumentParser(description='homo')
-    parser.add_argument('--data_name', type=str, default="bara_albert")
+    parser.add_argument('--data_name', type=str, default="Cora")
     parser.add_argument('--neg_mode', type=str, default='equal')
     parser.add_argument('--gnn_model', type=str, default='GCN')
     parser.add_argument('--score_model', type=str, default='mlp_score')
@@ -405,8 +534,8 @@ def parse_args():
     # print('use_hard_negative: ',args.use_hard_negative)
     # print(args)
     return args
-
-# %%
+    
+    
 def randomsplit(data, val_ratio: float = 0.05, test_ratio: float = 0.15):
     def removerepeated(ei):
         ei = to_undirected(ei)
@@ -427,10 +556,8 @@ def randomsplit(data, val_ratio: float = 0.05, test_ratio: float = 0.15):
     split_edge['test']['edge_neg'] = removerepeated(data.test_neg_edge_index).t()
     return split_edge
 
-# %%
     
-
-# %%
+    
 def data2dict(data, splits, data_name) -> dict:
     #TODO test with all ogbl-datasets, start with collab
     if data_name in ['Cora', 'Citeseer', 'Pubmed', 'Computers', 'Photo', 'ogbl-ddi']:
@@ -445,21 +572,10 @@ def data2dict(data, splits, data_name) -> dict:
         datadict.update({'train_val': torch.cat([splits['valid']['edge'], splits['train']['edge']])})
         datadict.update({'x': data.x}) 
     else:
-        print('data_name not supported')
-        #raise ValueError('data_name not supported')
-        datadict = {}
-        datadict.update({'adj': data.adj_t})
-        datadict.update({'train_pos': splits['train']['edge']})
-        # datadict.update({'train_neg': splits['train']['edge_neg']})
-        datadict.update({'valid_pos': splits['valid']['edge']})
-        datadict.update({'valid_neg': splits['valid']['edge_neg']})
-        datadict.update({'test_pos': splits['test']['edge']})
-        datadict.update({'test_neg': splits['test']['edge_neg']})   
-        datadict.update({'train_val': torch.cat([splits['valid']['edge'], splits['train']['edge']])})
-        datadict.update({'x': data.x}) 
+        raise ValueError('data_name not supported')
     return datadict
 
-# %%
+
 def train(model, score_func, train_pos, x, optimizer, batch_size):
     model.train()
     score_func.train()
@@ -501,10 +617,8 @@ def train(model, score_func, train_pos, x, optimizer, batch_size):
         total_examples += num_examples
     return total_loss / total_examples
 
-# %%
 
 
-# %%
 @torch.no_grad()
 def test_edge(score_func, input_data, h, batch_size):
     # input_data  = input_data.transpose(1, 0)
@@ -516,10 +630,8 @@ def test_edge(score_func, input_data, h, batch_size):
     pred_all = torch.cat(preds, dim=0)
     return pred_all
 
-# %%
 
 
-# %%
 @torch.no_grad()
 def test(model, score_func, data, x, evaluator_hit, evaluator_mrr, batch_size):
     model.eval()
@@ -541,10 +653,8 @@ def test(model, score_func, data, x, evaluator_hit, evaluator_mrr, batch_size):
     score_emb = [pos_valid_pred.cpu(),neg_valid_pred.cpu(), pos_test_pred.cpu(), neg_test_pred.cpu(), x.cpu()]
     return result, score_emb
 
-# %%
 
 
-# %%
 def get_metric_score(evaluator_hit, evaluator_mrr, pos_train_pred, pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
 
     # result_hit = evaluate_hits(evaluator_hit, pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
@@ -580,7 +690,7 @@ def get_metric_score(evaluator_hit, evaluator_mrr, pos_train_pred, pos_val_pred,
     # print(result.keys())
     return result
 
-# %%
+
 @torch.no_grad()
 def test(model, score_func, data, x, evaluator_hit, evaluator_mrr, batch_size):
     model.eval()
@@ -603,10 +713,8 @@ def test(model, score_func, data, x, evaluator_hit, evaluator_mrr, batch_size):
     # print(result.keys())
     return result, score_emb
 
-# %%
 
 
-# %%
 def get_graph_statistics(G, graph_name="Graph"):
     """Calculate and return statistics of a NetworkX graph."""
     num_nodes = G.number_of_nodes()
@@ -630,8 +738,14 @@ def get_graph_statistics(G, graph_name="Graph"):
     }
     return stats
 
-# %%
-def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
+
+def preprocess(data: Data)-> Data:
+    data.x = torch.ones(data.num_nodes, 16)
+    return data
+
+
+
+def run_training_pipeline(data, metrics, args):
     
     data = copy.deepcopy(data)
     G = to_networkx(data)
@@ -640,7 +754,10 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
     data.adj_t = SparseTensor.from_edge_index(
         data.edge_index, sparse_sizes=(data.num_nodes, data.num_nodes)
     ).to_symmetric().coalesce()
-    data.x = torch.ones((data.num_nodes, 16), dtype=torch.float) if data.x is None else data.x
+    
+    # preprocess 
+    data = preprocess(data)
+    
     split_edge = randomsplit(data)
     print("Dataset split:")
     for key1 in split_edge:
@@ -700,13 +817,9 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
 
     args.name_tag = (
         f'{args.data_name}_'
-        # f'Orbits_{metrics["Number of Unique Groups (C_auto)"]:.2f}_'
-        # f'ArScore_{metrics["automorphism_score"]:.2f}'
+        f'Orbits_{0:.2f}_'
         f'{args.gnn_model}_'
         f'{args.score_model}_'
-        # f'inter{inter:.2f}_'
-        # f'intra{intra:.2f}_'
-        # f'total{total_edges:.0f}_'
     )
 
     # for batch_size, lr in itertools.product(hyperparams['batch_size'], hyperparams['lr']):
@@ -717,7 +830,7 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
         if args.wandb_log:
             wandb.init(
                 project=f"{args.data_name}_",
-                name=f"{args.data_name}_num{stats['Number of Nodes']}_{args.batch_size}_{args.lr}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
+                name=f"{args.data_name}_{args.batch_size}{args.lr}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
             )
             wandb.config.update(args)
         print(f'#################################          Run {run}          #################################')
@@ -782,25 +895,28 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
     print(args.name_tag)
     mvari_str2csv(args.name_tag, save_dict, f'results/syn_{args.data_name}_{args.gnn_model}tuned.csv')
 
-# %%
-from collections import Counter
-for N in range(10, 100, 10):
-    G = generate_graph(N, GraphType.BARABASI_ALBERT, seed=0)
-    graph = from_networkx(G)
-    
-    # _, _, orbits = run_wl_test_and_group_nodes(graph.edge_index, num_nodes=graph.num_nodes, num_iterations=100)
-    orbits, num_orbit = get_graph_orbits(G)
-    print(f"Number of orbits: {num_orbit}")
-
-    custom_labels = {}
-    for i, ov in zip(G.nodes(), orbits):
-            custom_labels[i] = f"{ov}"
-    count_automorphic_edges(G, orbits)
-    analyze_automorphisms(G)
-    
 
 
-    # metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
-    run_training_pipeline(graph, {}, 0, 0, 0, args)
+def generate_measure(data: Data):
+    raise NotImplementedError
+    return 
 
 
+
+def main():
+    args = parse_args()
+    init_seed(args.seed)
+
+
+    folder = '/hkfs/work/workspace/scratch/cc7738-automorphism/ANP4Link/saved_graphs/BARABASI_ALBERT'
+    for gpath in os.listdir(folder):
+        full_path = os.path.join(folder, gpath)
+        print(f"Loading: {full_path}")
+        data = torch.load(full_path)
+        print(data)
+        # metrics = generate_measure(data)
+        run_training_pipeline(data, None, args)
+
+
+if __name__ == "__main__":
+    main()

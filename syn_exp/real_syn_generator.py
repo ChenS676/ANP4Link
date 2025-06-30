@@ -31,7 +31,7 @@ from syn_real.gnn_utils import (
 import matplotlib.pyplot as plt
 import networkx as nx
 
-from gnn_ogb_heart import init_seed
+from syn_real.gnn_ogb_heart import init_seed
 import torch
 from ogb.linkproppred import PygLinkPropPredDataset
 from torch_geometric.utils import k_hop_subgraph
