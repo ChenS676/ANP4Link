@@ -585,4 +585,10 @@ for N in range(4, 40, 10):
     process_graph(N, GraphType.LOBSTER)
 
 
-
+python exp.py --data_name 'BARABASI_ALBERT'
+python exp.py --data_name 'ERDOS_RENYI'
+python exp.py --data_name 'SYM_TREE'
+python exp.py --data_name 'LOBSTER'
+python exp.py --data_name 'LADDER'
+python exp.py --data_name 'Regular_Grid'
+python exp.py --data_name 'watts_strogatz'
