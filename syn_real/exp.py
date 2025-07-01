@@ -499,7 +499,7 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--eval_steps', type=int, default=1)
-    parser.add_argument('--runs', type=int, default=3)
+    parser.add_argument('--runs', type=int, default=1)
     parser.add_argument('--kill_cnt',           dest='kill_cnt',      default=20,    type=int,       help='early stopping')
     parser.add_argument('--output_dir', type=str, default='output_test')
     parser.add_argument('--l2',		type=float,             default=0.0,			help='L2 Regularization for Optimizer')
@@ -809,19 +809,11 @@ def run_training_pipeline(data, metrics, args):
 
     import itertools
     hyperparams = {
-        'batch_size': [2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12],
+        'batch_size': [2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12],
         'lr': [0.01, 0.001, 0.0001],
     }
-    # if args.data_name == 'Cora': 
-    #     args.batch_size = 1024
-    #     args.lr = 0.01
-    # elif args.data_name == 'Citeseer':
-    #     args.batch_size = 1024
-    #     args.lr = 0.001
-    # elif args.data_name == 'ogbl-ddi':
-    #     args.batch_size = 2**5
-    #     args.lr = 0.00001
 
+        
     args.name_tag = (
         f'{args.name_tag}_'
         f'Orbits_{0:.2f}_'
@@ -833,11 +825,32 @@ def run_training_pipeline(data, metrics, args):
         args.batch_size = batch_size
         args.lr = lr
         print(lr, batch_size)
+
+        # set hyperparameter
+        if args.data_name == 'Cora': 
+            args.batch_size = 1024
+            args.lr = 0.01
+        elif args.data_name == 'Citeseer':
+            args.batch_size = 1024
+            args.lr = 0.001
+        elif args.data_name == 'ogbl-ddi':
+            args.batch_size = 2**5
+            args.lr = 0.00001
+        elif args.data_name == 'BARABASI_ALBERT':
+            args.batch_size = 256
+            args.lr = 0.0001
+        elif args.data_name == 'ERDOS_RENYI':
+            args.batch_size = 128
+            args.lr = 0.01
+        elif args.data_name == 'SYM_TREE':
+            args.batch_size = 1024
+            args.lr = 0.0001          
+        
         for run in range(args.runs):
             if args.wandb_log:
                 wandb.init(
                     project=f"{args.data_name}_",
-                    name=f"{args.name_tag}_{args.batch_size}{args.lr}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
+                    name=f"{args.name_tag}_{args.batch_size}{args.lr}_HYPER_TUNE"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
                 )
                 wandb.config.update(args)
             print(f'#################################          Run {run}          #################################')
@@ -924,8 +937,8 @@ def main():
         for N in range(100, 1000, 100):
             bara = generate_graph(N, GraphType.BARABASI_ALBERT, seed=0)
             data = from_networkx(bara)
-        
-            args.name_tag = f'BARABASI_ALBERT_{N}'
+            
+            args.name_tag = f'barabasi_albert_{N}'
             run_training_pipeline(data, None, args)
     elif args.data_name == 'SYM_TREE':
         for depth in range(4, 10):  
@@ -934,13 +947,20 @@ def main():
             tree = nx.balanced_tree(r=branch, h=depth)
             data = from_networkx(tree)
             
-            print(tree)
             run_training_pipeline(data, None, args)
     elif args.data_name == 'ERDOS_RENYI':
         for N in range(200, 2000, 200):
             erdos = generate_graph(N, GraphType.ERDOS_RENYI, seed=0)
             data = from_networkx(erdos)
-            args.name_tag = f'balenced_tree_{N}'
+            args.name_tag = f'erdos_renyi_{N}'
+            
+            run_training_pipeline(data, None, args)
+    elif args.data_name == 'LOBSTER':
+        for N in range(100, 1000, 100):
+            lobster = generate_graph(N, GraphType.LOBSTER)
+            data = from_networkx(lobster)
+            
+            args.name_tag = f'lobster_{N}'
             run_training_pipeline(data, None, args)
     else:
         pass
