@@ -807,13 +807,12 @@ def run_training_pipeline(data, metrics, args):
         ]
     }
 
-    import itertools
-    hyperparams = {
-        'batch_size': [2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12],
-        'lr': [0.01, 0.001, 0.0001],
-    }
+    # import itertools
+    # hyperparams = {
+    #     'batch_size': [2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12],
+    #     'lr': [0.01, 0.001, 0.0001],
+    # }
 
-        
     args.name_tag = (
         f'{args.name_tag}_'
         f'Orbits_{0:.2f}_'
@@ -821,99 +820,111 @@ def run_training_pipeline(data, metrics, args):
         f'{args.score_model}_'
     )
 
-    for batch_size, lr in itertools.product(hyperparams['batch_size'], hyperparams['lr']):
-        args.batch_size = batch_size
-        args.lr = lr
-        print(lr, batch_size)
+    # for batch_size, lr in itertools.product(hyperparams['batch_size'], hyperparams['lr']):
+    #     args.batch_size = batch_size
+    #     args.lr = lr
+    #     print(lr, batch_size)
 
-        # set hyperparameter
-        if args.data_name == 'Cora': 
-            args.batch_size = 1024
-            args.lr = 0.01
-        elif args.data_name == 'Citeseer':
-            args.batch_size = 1024
-            args.lr = 0.001
-        elif args.data_name == 'ogbl-ddi':
-            args.batch_size = 2**5
-            args.lr = 0.00001
-        elif args.data_name == 'BARABASI_ALBERT':
-            args.batch_size = 256
-            args.lr = 0.0001
-        elif args.data_name == 'ERDOS_RENYI':
-            args.batch_size = 128
-            args.lr = 0.01
-        elif args.data_name == 'SYM_TREE':
-            args.batch_size = 1024
-            args.lr = 0.0001          
-        
-        for run in range(args.runs):
-            if args.wandb_log:
-                wandb.init(
-                    project=f"{args.data_name}_",
-                    name=f"{args.name_tag}_{args.batch_size}{args.lr}_HYPER_TUNE"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
+    # set hyperparameter
+    if args.data_name == 'Cora': 
+        args.batch_size = 1024
+        args.lr = 0.01
+    elif args.data_name == 'Citeseer':
+        args.batch_size = 1024
+        args.lr = 0.001
+    elif args.data_name == 'ogbl-ddi':
+        args.batch_size = 2**5
+        args.lr = 0.00001
+    elif args.data_name == 'BARABASI_ALBERT':
+        args.batch_size = 256
+        args.lr = 0.0001
+    elif args.data_name == 'ERDOS_RENYI':
+        args.batch_size = 128
+        args.lr = 0.01
+    elif args.data_name == 'LOBSTER':
+        args.batch_size = 1024
+        args.lr = 0.01
+    elif args.data_name == 'SYM_TREE':
+        args.batch_size = 1024
+        args.lr = 0.0001     
+    elif args.data_name == 'LADDER':
+        args.batch_size = 512
+        args.lr = 0.0001     
+    elif args.data_name == 'Regular_Grid':
+        args.batch_size = 1024
+        args.lr = 0.01   
+    elif args.data_name == 'watts_strogatz':
+        args.batch_size = 1024
+        args.lr = 0.01          
+
+    for run in range(args.runs):
+        if args.wandb_log:
+            wandb.init(
+                project=f"{args.data_name}_",
+                name=f"{args.name_tag}_{args.batch_size}{args.lr}_Train"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
+            )
+            wandb.config.update(args)
+        print(f'#################################          Run {run}          #################################')
+        seed = args.seed if args.runs == 1 else run
+        print('seed:', seed)
+        init_seed(seed)
+        save_path = os.path.join(
+            args.output_dir,
+            f'lr{args.lr}_drop{args.dropout}_l2{args.l2}_numlayer{args.num_layers}_'
+            f'numPredlay{args.num_layers_predictor}_numGinMlplayer{args.gin_mlp_layer}_'
+            f'dim{args.hidden_channels}_best_run_{seed}'
+        )
+        model.reset_parameters()
+        score_func.reset_parameters()
+        optimizer = torch.optim.Adam(
+            list(model.parameters()) + list(score_func.parameters()),
+            lr=args.lr,
+            weight_decay=args.l2
+        )
+        best_valid, best_test, kill_cnt, step = 0, 0, 0, 0
+        for epoch in range(1, args.epochs + 1):
+            loss = train(model, score_func, train_pos, x, optimizer, args.batch_size)
+            if epoch % args.eval_steps == 0:
+                results_rank, score_emb = test(
+                    model, score_func, data, x,
+                    evaluator_hit, evaluator_mrr, args.batch_size
                 )
-                wandb.config.update(args)
-            print(f'#################################          Run {run}          #################################')
-            seed = args.seed if args.runs == 1 else run
-            print('seed:', seed)
-            init_seed(seed)
-            save_path = os.path.join(
-                args.output_dir,
-                f'lr{args.lr}_drop{args.dropout}_l2{args.l2}_numlayer{args.num_layers}_'
-                f'numPredlay{args.num_layers_predictor}_numGinMlplayer{args.gin_mlp_layer}_'
-                f'dim{args.hidden_channels}_best_run_{seed}'
-            )
-            model.reset_parameters()
-            score_func.reset_parameters()
-            optimizer = torch.optim.Adam(
-                list(model.parameters()) + list(score_func.parameters()),
-                lr=args.lr,
-                weight_decay=args.l2
-            )
-            best_valid, best_test, kill_cnt, step = 0, 0, 0, 0
-            for epoch in range(1, args.epochs + 1):
-                loss = train(model, score_func, train_pos, x, optimizer, args.batch_size)
-                if epoch % args.eval_steps == 0:
-                    results_rank, score_emb = test(
-                        model, score_func, data, x,
-                        evaluator_hit, evaluator_mrr, args.batch_size
-                    )
 
-                    for key, result in results_rank.items():
-                        loggers[key].add_result(run, result)
-                        if loss > 20: 
-                            continue
-                        wandb.log({'train_loss': loss}, step=epoch) if args.wandb_log else None
-                        wandb.log({f"Metrics/{key}": result[-1]}, step=epoch) if args.wandb_log else None
-                        step += 1
-                    best_valid_current = torch.tensor(loggers[eval_metric].results[run])[:, 1].max()
-                    if best_valid_current > best_valid:
-                        best_valid = best_valid_current
-                        kill_cnt = 0
-                        if args.save:
-                            save_emb(score_emb, save_path)
-                    else:
-                        kill_cnt += 1
-                        if kill_cnt > args.kill_cnt:
-                            print("Early Stopping!!")
-                            break
-            wandb.finish() if args.wandb_log else None
-                    
-        result_all_run = {} 
-        save_dict = {}
-        for key in loggers.keys():
-            if key in ['Hits@1', 'AUC', 'AP', 'MRR']:
-                best_metric, best_valid_mean, mean_list, var_list, test_res = loggers[key].print_statistics()
-                if key == eval_metric:
-                    best_metric_valid_str = best_metric
-                if key == 'AUC':
-                    best_auc_valid_str = best_metric
-                result_all_run[key] = [mean_list, var_list]
-                save_dict[key] = test_res
-                print(save_dict)
-        print(best_metric_valid_str + ' ' + best_auc_valid_str)
-        print(args.name_tag)
-        mvari_str2csv(args.name_tag, save_dict, f'results/syn_{args.data_name}_{args.gnn_model}tuned.csv')
+                for key, result in results_rank.items():
+                    loggers[key].add_result(run, result)
+                    if loss > 20: 
+                        continue
+                    wandb.log({'train_loss': loss}, step=epoch) if args.wandb_log else None
+                    wandb.log({f"Metrics/{key}": result[-1]}, step=epoch) if args.wandb_log else None
+                    step += 1
+                best_valid_current = torch.tensor(loggers[eval_metric].results[run])[:, 1].max()
+                if best_valid_current > best_valid:
+                    best_valid = best_valid_current
+                    kill_cnt = 0
+                    if args.save:
+                        save_emb(score_emb, save_path)
+                else:
+                    kill_cnt += 1
+                    if kill_cnt > args.kill_cnt:
+                        print("Early Stopping!!")
+                        break
+        wandb.finish() if args.wandb_log else None
+                
+    result_all_run = {} 
+    save_dict = {}
+    for key in loggers.keys():
+        if key in ['Hits@1', 'AUC', 'AP', 'MRR']:
+            best_metric, best_valid_mean, mean_list, var_list, test_res = loggers[key].print_statistics()
+            if key == eval_metric:
+                best_metric_valid_str = best_metric
+            if key == 'AUC':
+                best_auc_valid_str = best_metric
+            result_all_run[key] = [mean_list, var_list]
+            save_dict[key] = test_res
+            print(save_dict)
+    print(best_metric_valid_str + ' ' + best_auc_valid_str)
+    print(args.name_tag)
+    mvari_str2csv(args.name_tag, save_dict, f'results/syn_{args.data_name}_{args.gnn_model}tuned.csv')
 
 
 
@@ -940,6 +951,7 @@ def main():
             
             args.name_tag = f'barabasi_albert_{N}'
             run_training_pipeline(data, None, args)
+            
     elif args.data_name == 'SYM_TREE':
         for depth in range(4, 10):  
             branch = 2  
@@ -948,6 +960,7 @@ def main():
             data = from_networkx(tree)
             
             run_training_pipeline(data, None, args)
+            
     elif args.data_name == 'ERDOS_RENYI':
         for N in range(200, 2000, 200):
             erdos = generate_graph(N, GraphType.ERDOS_RENYI, seed=0)
@@ -955,6 +968,7 @@ def main():
             args.name_tag = f'erdos_renyi_{N}'
             
             run_training_pipeline(data, None, args)
+            
     elif args.data_name == 'LOBSTER':
         for N in range(100, 1000, 100):
             lobster = generate_graph(N, GraphType.LOBSTER)
@@ -962,8 +976,36 @@ def main():
             
             args.name_tag = f'lobster_{N}'
             run_training_pipeline(data, None, args)
+            
+    elif args.data_name == 'LADDER':
+        for N in range(100, 400, 100):
+            ladder = generate_graph(N, GraphType.LADDER)
+            data = from_networkx(ladder)
+            
+            args.name_tag = f'ladder_{N}'
+            run_training_pipeline(data, None, args)
+            
+    elif args.data_name == 'Regular_Grid':
+        for N in range(10, 80, 10):
+            reg_grid = nx.grid_2d_graph(N, N)
+            data = from_networkx(reg_grid)
+            
+            args.name_tag = f'regular_grid_{N}'
+            run_training_pipeline(data, None, args)
+            
+    elif args.data_name == 'watts_strogatz':
+        k = 4      
+        p = 0.1    
+        for N in range(100, 1000, 200):
+            G = nx.watts_strogatz_graph(N, k, p)
+            data = from_networkx(G)
+                
+            args.name_tag = f'watts_strogatz_{N}'
+            run_training_pipeline(data, None, args)
+        
     else:
         pass
+    
             
 if __name__ == "__main__":
     main()
