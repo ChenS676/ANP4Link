@@ -499,7 +499,7 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--eval_steps', type=int, default=1)
-    parser.add_argument('--runs', type=int, default=1)
+    parser.add_argument('--runs', type=int, default=3)
     parser.add_argument('--kill_cnt',           dest='kill_cnt',      default=20,    type=int,       help='early stopping')
     parser.add_argument('--output_dir', type=str, default='output_test')
     parser.add_argument('--l2',		type=float,             default=0.0,			help='L2 Regularization for Optimizer')
@@ -568,7 +568,17 @@ def data2dict(data, splits, data_name) -> dict:
         datadict.update({'train_val': torch.cat([splits['valid']['edge'], splits['train']['edge']])})
         datadict.update({'x': data.x}) 
     else:
-        raise ValueError('data_name not supported')
+        print('data_name not supported')
+        datadict = {}
+        datadict.update({'adj': data.adj_t})
+        datadict.update({'train_pos': splits['train']['edge']})
+        # datadict.update({'train_neg': splits['train']['edge_neg']})
+        datadict.update({'valid_pos': splits['valid']['edge']})
+        datadict.update({'valid_neg': splits['valid']['edge_neg']})
+        datadict.update({'test_pos': splits['test']['edge']})
+        datadict.update({'test_neg': splits['test']['edge_neg']})   
+        datadict.update({'train_val': torch.cat([splits['valid']['edge'], splits['train']['edge']])})
+        datadict.update({'x': data.x}) 
     return datadict
 
 
@@ -581,6 +591,7 @@ def train(model, score_func, train_pos, x, optimizer, batch_size):
 
     for perm in DataLoader(range(train_pos.size(0)), batch_size,
                            shuffle=True):
+
         optimizer.zero_grad()
         num_nodes = x.size(0)
         ######################### remove loss edges from the aggregation
@@ -796,100 +807,100 @@ def run_training_pipeline(data, metrics, args):
         ]
     }
 
-    # import itertools
-    # hyperparams = {
-    #     'batch_size': [2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12],
-    #     'lr': [0.01, 0.001, 0.0001],
-    # }
-    if args.data_name == 'Cora': 
-        args.batch_size = 1024
-        args.lr = 0.01
-    elif args.data_name == 'Citeseer':
-        args.batch_size = 1024
-        args.lr = 0.001
-    elif args.data_name == 'ogbl-ddi':
-        args.batch_size = 2**5
-        args.lr = 0.00001
+    import itertools
+    hyperparams = {
+        'batch_size': [2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12],
+        'lr': [0.01, 0.001, 0.0001],
+    }
+    # if args.data_name == 'Cora': 
+    #     args.batch_size = 1024
+    #     args.lr = 0.01
+    # elif args.data_name == 'Citeseer':
+    #     args.batch_size = 1024
+    #     args.lr = 0.001
+    # elif args.data_name == 'ogbl-ddi':
+    #     args.batch_size = 2**5
+    #     args.lr = 0.00001
 
     args.name_tag = (
-        f'{args.data_name}_'
+        f'{args.name_tag}_'
         f'Orbits_{0:.2f}_'
         f'{args.gnn_model}_'
         f'{args.score_model}_'
     )
 
-    # for batch_size, lr in itertools.product(hyperparams['batch_size'], hyperparams['lr']):
-    #     args.batch_size = batch_size
-    #     args.lr = lr
-    
-    for run in range(args.runs):
-        if args.wandb_log:
-            wandb.init(
-                project=f"{args.data_name}_",
-                name=f"{args.data_name}_{args.batch_size}{args.lr}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
-            )
-            wandb.config.update(args)
-        print(f'#################################          Run {run}          #################################')
-        seed = args.seed if args.runs == 1 else run
-        print('seed:', seed)
-        init_seed(seed)
-        save_path = os.path.join(
-            args.output_dir,
-            f'lr{args.lr}_drop{args.dropout}_l2{args.l2}_numlayer{args.num_layers}_'
-            f'numPredlay{args.num_layers_predictor}_numGinMlplayer{args.gin_mlp_layer}_'
-            f'dim{args.hidden_channels}_best_run_{seed}'
-        )
-        model.reset_parameters()
-        score_func.reset_parameters()
-        optimizer = torch.optim.Adam(
-            list(model.parameters()) + list(score_func.parameters()),
-            lr=args.lr,
-            weight_decay=args.l2
-        )
-        best_valid, best_test, kill_cnt, step = 0, 0, 0, 0
-        for epoch in range(1, args.epochs + 1):
-            loss = train(model, score_func, train_pos, x, optimizer, args.batch_size)
-            if epoch % args.eval_steps == 0:
-                results_rank, score_emb = test(
-                    model, score_func, data, x,
-                    evaluator_hit, evaluator_mrr, args.batch_size
+    for batch_size, lr in itertools.product(hyperparams['batch_size'], hyperparams['lr']):
+        args.batch_size = batch_size
+        args.lr = lr
+        print(lr, batch_size)
+        for run in range(args.runs):
+            if args.wandb_log:
+                wandb.init(
+                    project=f"{args.data_name}_",
+                    name=f"{args.name_tag}_{args.batch_size}{args.lr}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
                 )
+                wandb.config.update(args)
+            print(f'#################################          Run {run}          #################################')
+            seed = args.seed if args.runs == 1 else run
+            print('seed:', seed)
+            init_seed(seed)
+            save_path = os.path.join(
+                args.output_dir,
+                f'lr{args.lr}_drop{args.dropout}_l2{args.l2}_numlayer{args.num_layers}_'
+                f'numPredlay{args.num_layers_predictor}_numGinMlplayer{args.gin_mlp_layer}_'
+                f'dim{args.hidden_channels}_best_run_{seed}'
+            )
+            model.reset_parameters()
+            score_func.reset_parameters()
+            optimizer = torch.optim.Adam(
+                list(model.parameters()) + list(score_func.parameters()),
+                lr=args.lr,
+                weight_decay=args.l2
+            )
+            best_valid, best_test, kill_cnt, step = 0, 0, 0, 0
+            for epoch in range(1, args.epochs + 1):
+                loss = train(model, score_func, train_pos, x, optimizer, args.batch_size)
+                if epoch % args.eval_steps == 0:
+                    results_rank, score_emb = test(
+                        model, score_func, data, x,
+                        evaluator_hit, evaluator_mrr, args.batch_size
+                    )
 
-                for key, result in results_rank.items():
-                    loggers[key].add_result(run, result)
-                    if loss > 20: 
-                        continue
-                    wandb.log({'train_loss': loss}, step=epoch) if args.wandb_log else None
-                    wandb.log({f"Metrics/{key}": result[-1]}, step=epoch) if args.wandb_log else None
-                    step += 1
-                best_valid_current = torch.tensor(loggers[eval_metric].results[run])[:, 1].max()
-                if best_valid_current > best_valid:
-                    best_valid = best_valid_current
-                    kill_cnt = 0
-                    if args.save:
-                        save_emb(score_emb, save_path)
-                else:
-                    kill_cnt += 1
-                    if kill_cnt > args.kill_cnt:
-                        print("Early Stopping!!")
-                        break
-        wandb.finish() if args.wandb_log else None
-                
-    result_all_run = {} 
-    save_dict = {}
-    for key in loggers.keys():
-        if key in ['Hits@1', 'AUC', 'AP', 'MRR']:
-            best_metric, best_valid_mean, mean_list, var_list, test_res = loggers[key].print_statistics()
-            if key == eval_metric:
-                best_metric_valid_str = best_metric
-            if key == 'AUC':
-                best_auc_valid_str = best_metric
-            result_all_run[key] = [mean_list, var_list]
-            save_dict[key] = test_res
-            print(save_dict)
-    print(best_metric_valid_str + ' ' + best_auc_valid_str)
-    print(args.name_tag)
-    mvari_str2csv(args.name_tag, save_dict, f'results/syn_{args.data_name}_{args.gnn_model}tuned.csv')
+                    for key, result in results_rank.items():
+                        loggers[key].add_result(run, result)
+                        if loss > 20: 
+                            continue
+                        wandb.log({'train_loss': loss}, step=epoch) if args.wandb_log else None
+                        wandb.log({f"Metrics/{key}": result[-1]}, step=epoch) if args.wandb_log else None
+                        step += 1
+                    best_valid_current = torch.tensor(loggers[eval_metric].results[run])[:, 1].max()
+                    if best_valid_current > best_valid:
+                        best_valid = best_valid_current
+                        kill_cnt = 0
+                        if args.save:
+                            save_emb(score_emb, save_path)
+                    else:
+                        kill_cnt += 1
+                        if kill_cnt > args.kill_cnt:
+                            print("Early Stopping!!")
+                            break
+            wandb.finish() if args.wandb_log else None
+                    
+        result_all_run = {} 
+        save_dict = {}
+        for key in loggers.keys():
+            if key in ['Hits@1', 'AUC', 'AP', 'MRR']:
+                best_metric, best_valid_mean, mean_list, var_list, test_res = loggers[key].print_statistics()
+                if key == eval_metric:
+                    best_metric_valid_str = best_metric
+                if key == 'AUC':
+                    best_auc_valid_str = best_metric
+                result_all_run[key] = [mean_list, var_list]
+                save_dict[key] = test_res
+                print(save_dict)
+        print(best_metric_valid_str + ' ' + best_auc_valid_str)
+        print(args.name_tag)
+        mvari_str2csv(args.name_tag, save_dict, f'results/syn_{args.data_name}_{args.gnn_model}tuned.csv')
 
 
 
@@ -903,16 +914,36 @@ def main():
     args = parse_args()
     init_seed(args.seed)
 
-
-    folder = f'{grandparent_dir}/saved_graphs/BARABASI_ALBERT'
-    for gpath in os.listdir(folder):
-        full_path = os.path.join(folder, gpath)
-        print(f"Loading: {full_path}")
-        data = torch.load(full_path)
-        print(data)
-        # metrics = generate_measure(data)
-        run_training_pipeline(data, None, args)
-
-
+    from syn_graph.graph_generation import (GraphType, 
+                                            generate_graph)
+    from torch_geometric.utils import (from_networkx
+                                        )
+    
+    # power law graph
+    if args.data_name == 'BARABASI_ALBERT':
+        for N in range(100, 1000, 100):
+            bara = generate_graph(N, GraphType.BARABASI_ALBERT, seed=0)
+            data = from_networkx(bara)
+        
+            args.name_tag = f'BARABASI_ALBERT_{N}'
+            run_training_pipeline(data, None, args)
+    elif args.data_name == 'SYM_TREE':
+        for depth in range(4, 10):  
+            branch = 2  
+            args.name_tag = f'balenced_tree_{depth}'
+            tree = nx.balanced_tree(r=branch, h=depth)
+            data = from_networkx(tree)
+            
+            print(tree)
+            run_training_pipeline(data, None, args)
+    elif args.data_name == 'ERDOS_RENYI':
+        for N in range(200, 2000, 200):
+            erdos = generate_graph(N, GraphType.ERDOS_RENYI, seed=0)
+            data = from_networkx(erdos)
+            args.name_tag = f'balenced_tree_{N}'
+            run_training_pipeline(data, None, args)
+    else:
+        pass
+            
 if __name__ == "__main__":
     main()
