@@ -1,8 +1,9 @@
 # %%
 import os
 import sys
-sys.path.insert(0, "/hkfs/work/workspace/scratch/cc7738-automorphism/ANP4Link/")
-
+current_file = os.path.abspath(__file__)
+grandparent_dir = os.path.dirname(os.path.dirname(current_file))
+sys.path.insert(0, grandparent_dir)
 # === Standard Library ===
 import random
 from collections import defaultdict, Counter
@@ -87,48 +88,6 @@ def create_disjoint_graph(data):
 
 
 
-# %%
-def semi_syn_graph(G, pos=None):
-    # print(f"Processing graph of type {graph_type} with {N} nodes")
-    # if graph_type == RegularTilling.SQUARE_GRID:
-    #     G, _, _, pos = init_regular_tilling(N, RegularTilling.SQUARE_GRID, seed=None)
-    # elif graph_type == 'GraphType.COMPLETE':
-    #     graph_type = 'GraphType.COMPLETE'
-    #     G = nx.complete_graph(N)
-    # else:
-    #     G = generate_graph(N, graph_type, seed=0)
-    
-    # Process Graph with WL Test
-    data = from_networkx(G)
-    # print(f"Graph type: {graph_type}, Number of nodes: {data.num_nodes}, Number of edges: {data.num_edges}")
-    # print(f"Number of nodes in the graph: {data.num_nodes}")
-    mdata, mG = create_disjoint_graph(data)
-    # print(f"Merged Graph type: {graph_type}, Number of nodes: {mdata.num_nodes}, Number of edges: {mdata.num_edges}")
-    print(mdata)
-
-    # check the WL distribution
-    _, node_labels, orbits = run_wl_test_and_group_nodes(data.edge_index, num_nodes=data.num_nodes, num_iterations=100)
-    custom_labels = {}
-    for i, ov in zip(G.nodes(), orbits):
-            custom_labels[i] = f"{ov}"
-    plot_graph_with_orbits(G, None, orbits, custom_labels=custom_labels, figsize=(8, 6), cmap='tab20b')
-    count_orbit_edges(G, node_labels)
-
-    _, mnode_labels, morbits = run_wl_test_and_group_nodes(mdata.edge_index, num_nodes=mdata.num_nodes, num_iterations=100)
-    # metrics, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, G.number_of_nodes())
-
-    custom_labels = {}
-    for i, ov in zip(mG.nodes(), morbits):
-            custom_labels[i] = f"{ov}"
-    
-    plot_graph_with_orbits(mG, None, morbits, custom_labels=custom_labels, figsize=(8, 6), cmap='tab20b')
-    count_orbit_edges(mG, mnode_labels)
-    return 
-
-
-
-
-
 def add_random_edges(graph_data, 
                      inter_ratio=0.5, 
                      intra_ratio=0.5, 
@@ -159,36 +118,8 @@ def add_random_edges(graph_data,
         intra_edges_list.append((u, v))
         
     new_edges = torch.tensor(inter_edges_list + intra_edges_list, dtype=torch.long).T
-    print(new_edges.shape)
     updated_edge_index = torch.cat([graph_data.edge_index, new_edges], dim=1)
     return Data(edge_index=updated_edge_index, num_nodes=graph_data.num_nodes, x=graph_data.x), updated_edge_index
-
-
-
-
-def semi_autom_test(N, graph_type, pos=None):
-    # print(f"Processing graph of type {graph_type} with {N} nodes")
-    if graph_type == RegularTilling.SQUARE_GRID:
-        G, _, _, pos = init_regular_tilling(N, RegularTilling.SQUARE_GRID, seed=None)
-    elif graph_type == 'GraphType.COMPLETE':
-        graph_type = 'GraphType.COMPLETE'
-        G = nx.complete_graph(N)
-    else:
-        G = generate_graph(N, graph_type, seed=0)
-    
-    # Process Graph with WL Test
-    data = from_networkx(G)
-    # print(f"Graph type: {graph_type}, Number of nodes: {data.num_nodes}, Number of edges: {data.num_edges}")
-    # print(f"Number of nodes in the graph: {data.num_nodes}")
-
-    # check the WL distribution
-    analyze_automorphisms(G)
-
-    mdata, mG = create_disjoint_graph(data)
-    analyze_automorphisms(mG)
-    return 
-
-
 
 
 

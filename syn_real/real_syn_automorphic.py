@@ -1,8 +1,6 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import os
-import sys
 import random
 import argparse
 import numpy as np
@@ -35,7 +33,8 @@ from baselines.gnn_utils import (GCN,
 import matplotlib.pyplot as plt
 import networkx as nx
 import pandas as pd
-from torch_geometric.utils import train_test_split_edges, to_undirected
+from torch_geometric.utils import (train_test_split_edges, 
+								   to_undirected)
 import copy
 import torch
 import argparse
@@ -46,20 +45,20 @@ from torch.utils.data import DataLoader
 import wandb
 
 
-from syn_real.gnn_utils  import evaluate_hits, evaluate_auc, evaluate_mrr
-from syn_real.gnn_utils import (
-    get_root_dir, 
-    get_logger, 
-    get_config_dir, 
-    Logger, 
-    init_seed
-)
+from syn_real.gnn_utils  import (evaluate_hits, 
+								 evaluate_auc, 
+								 evaluate_mrr)
+
 from baselines.gnn_utils import (get_root_dir, 
                                  get_logger, 
                                  get_config_dir, 
                                  Logger, 
                                  init_seed, 
                                  save_emb)
+
+from syn_real.auto_operation import (create_disjoint_graph, 
+									 add_random_edges)
+
 from graphgps.utility.utils import mvari_str2csv
 from syn_real.gnn_ogb_heart import init_seed
 from syn_real.automorphism import (run_wl_test_and_group_nodes, 
@@ -93,8 +92,6 @@ from syn_real.automorphism import (run_wl_test_and_group_nodes,
 
 dir_path = get_root_dir()
 log_print = get_logger('testrun', 'log', get_config_dir())
-DATASET_PATH = '/hkfs/work/workspace/scratch/cc7738-rebuttal/Universal-MP/baselines/dataset'
-PT_LIST = [f"plots/Citeseer/processed_graph_inter0.5_intra0.5_edges1000_auto0.7200_norm1_0.7676.pt"]
 
 
 def remove_random_edges(graph_data, inter_ratio=0.5, intra_ratio=0.5, total_edges=1000):
@@ -162,7 +159,10 @@ def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     """
     # Add random edges to the graph
     if inter_ratio != 0 and intra_ratio != 0 and total_edges != 0:
-        updated_graph_data = add_random_edges(graph_data, inter_ratio=inter_ratio, intra_ratio=intra_ratio, total_edges=total_edges)
+        updated_graph_data = add_random_edges(graph_data, 
+                                              inter_ratio=inter_ratio, 
+                                              intra_ratio=intra_ratio, 
+                                              total_edges=total_edges)
     else:
         updated_graph_data = graph_data
     # Convert to NetworkX graph for visualization
@@ -171,19 +171,19 @@ def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     # print degree distribution 
     node_groups, node_labels, new_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, num_nodes=num_nodes, num_iterations=30)
     intra_orbit_edges, inter_orbit_edges = count_automorphic_edges(G, node_labels)
-    # metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
+    metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
     # metrics_after.update({'head': f'{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}'})
     # csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
     # file_exists = os.path.isfile(csv_path)
-    # df = pd.DataFrame([metrics_after])
+    df = pd.DataFrame([metrics_after])
     # df.to_csv(csv_path, mode='a', index=False, header=not file_exists)
-    # print(df)
+    print(df)
     
     # plot_group_size_distribution(group_sizes, args, f'plots/{args.data_name}/group_size_log1p{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
     # plot_histogram_group_size_log_scale(group_sizes, metrics_after, args, f'plots/{args.data_name}/hist_group_size_log_{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
     # plot_graph_visualization(updated_graph_data, node_labels, args,  f'plots/{args.data_name}/wl_test_{args.data_name}_vis_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
     print(f"Finished with inter_ratio={inter_ratio}, intra_ratio={intra_ratio}, total_edges={total_edges}")
-    return updated_graph_data#, metrics_after , node_groups, node_labels, new_edges
+    return updated_graph_data, metrics_after 
 
     
     
@@ -723,7 +723,7 @@ def main():
     perturb_disjoint(original_data, args, 0, 0, 0)
     
     disjoint_graph = create_disjoint_graph(original_data)
-    disjoint_graph = perturb_disjoint(disjoint_graph, args, 0, 0, 0)
+    disjoint_graph, _ = perturb_disjoint(disjoint_graph, args, 0, 0, 0)
     # run_training_pipeline(disjoint_graph, metrics, 0, 0, 0, args)
     
     if args.data_name == 'Cora':
@@ -751,8 +751,8 @@ def main():
         for intra in intra_ratios:
             for edge_factor in total_edges_list:
                 total_edges = int(edge_factor * multi_factor)
-                data = perturb_disjoint(disjoint_graph, args, inter, intra, total_edges)
-                # run_training_pipeline(data, metrics, inter, intra, total_edges, args)
+                data, metrics = perturb_disjoint(disjoint_graph, args, inter, intra, total_edges)
+                run_training_pipeline(data, metrics, inter, intra, total_edges, args)
 
 if __name__ == "__main__":
     main()

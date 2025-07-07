@@ -236,7 +236,7 @@ def run_experiment(graph_data, args, inter_ratio, intra_ratio, total_edges):
     # Convert to NetworkX graph for visualization
     G = to_networkx(updated_graph_data, to_undirected=True)
     num_nodes = updated_graph_data.num_nodes
-    node_groups, node_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, num_nodes=num_nodes, num_iterations=30)
+    node_groups, node_labels, new_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, num_nodes=num_nodes, num_iterations=30)
     
     metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
     metrics_after.update({'head': f'{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}'})
@@ -254,7 +254,7 @@ def run_experiment(graph_data, args, inter_ratio, intra_ratio, total_edges):
     
 def parse_args():
     parser = argparse.ArgumentParser(description='homo')
-    parser.add_argument('--data_name', type=str, default="ogbl-ddi")
+    parser.add_argument('--data_name', type=str, default="Cora")
     parser.add_argument('--neg_mode', type=str, default='equal')
     parser.add_argument('--gnn_model', type=str, default='GCN')
     parser.add_argument('--score_model', type=str, default='mlp_score')
