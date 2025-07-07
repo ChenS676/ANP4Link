@@ -1,7 +1,9 @@
 # %%
 import os
 import sys
-sys.path.insert(0, "/hkfs/work/workspace/scratch/cc7738-automorphism/ANP4Link/")
+current_file = os.path.abspath(__file__)
+grandparent_dir = os.path.dirname(os.path.dirname(current_file))
+sys.path.insert(0, grandparent_dir)
 import numpy as np
 import torch
 from torch_geometric.datasets import Planetoid
@@ -185,7 +187,7 @@ if __name__ == '__main__':
     interval = 1
     for edges in total_edges:
         if inter_ratio != 0 and intra_ratio != 0 and total_edges != 0:
-            updated_graph_data, new_edges = add_random_edges(data, inter_ratio=inter_ratio, total_edges=edges*interval)
+            updated_graph_data = add_random_edges(data, inter_ratio=inter_ratio, total_edges=edges*interval)
             # rewired_data = rewire_edges_regularly(data, keep_prob=0.6)
         else:
             updated_graph_data = data

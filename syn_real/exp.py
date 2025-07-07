@@ -484,12 +484,11 @@ def parse_args():
     parser.add_argument('--neg_mode', type=str, default='equal')
     parser.add_argument('--gnn_model', type=str, default='GCN')
     parser.add_argument('--score_model', type=str, default='mlp_score')
-    parser.add_argument('--pt_path', default=f"plots/Citeseer/processed_graph_inter0.5_intra0.5_edges1000_auto0.7200_norm1_0.7676.pt",
-                        type=str)
+    
     ##gnn setting
     parser.add_argument('--num_layers', type=int, default=3)
     parser.add_argument('--num_layers_predictor', type=int, default=3)
-    parser.add_argument('--hidden_channels', type=int, default=32)
+    parser.add_argument('--hidden_channels', type=int, default=128)
     parser.add_argument('--gnnout_hidden_channels', type=int, default=512)
     parser.add_argument('--dropout', type=float, default=0.1)
     parser.add_argument('--eval_metric', type=str, default='AUC')
@@ -953,7 +952,7 @@ def main():
             run_training_pipeline(data, None, args)
             
     elif args.data_name == 'SYM_TREE':
-        for depth in range(4, 10):  
+        for depth in range(7, 9):  
             branch = 2  
             args.name_tag = f'balenced_tree_{depth}'
             tree = nx.balanced_tree(r=branch, h=depth)
@@ -962,7 +961,7 @@ def main():
             run_training_pipeline(data, None, args)
             
     elif args.data_name == 'ERDOS_RENYI':
-        for N in range(200, 2000, 200):
+        for N in range(100, 1000, 200):
             erdos = generate_graph(N, GraphType.ERDOS_RENYI, seed=0)
             data = from_networkx(erdos)
             args.name_tag = f'erdos_renyi_{N}'

@@ -1,7 +1,10 @@
 # %%
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+current_file = os.path.abspath(__file__)
+grandparent_dir = os.path.dirname(os.path.dirname(current_file))
+sys.path.insert(0, grandparent_dir)
+
 import networkx as nx
 import matplotlib.pyplot as plt
 import scipy.sparse as sp

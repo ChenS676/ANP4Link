@@ -19,7 +19,7 @@ from torch_geometric.utils import (
     to_networkx
 )
 from ogb.linkproppred import PygLinkPropPredDataset
-from automorphism import run_wl_test_and_group_nodes, compute_automorphism_metrics
+from syn_real.automorphism import run_wl_test_and_group_nodes, compute_automorphism_metrics
 from baselines.data_utils.lcc import get_largest_connected_component, use_lcc
 from syn_real.gnn_utils import (
     get_root_dir, 
