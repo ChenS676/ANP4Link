@@ -55,7 +55,7 @@ from baselines.gnn_utils import (get_root_dir,
                                  Logger, 
                                  init_seed, 
                                  save_emb)
-
+from syn_real.auto_syn_cora import analyze_automorphisms, remove_random_edges   
 from syn_real.auto_operation import (create_disjoint_graph, 
 									 add_random_edges)
 
@@ -94,57 +94,67 @@ dir_path = get_root_dir()
 log_print = get_logger('testrun', 'log', get_config_dir())
 
 
-def remove_random_edges(graph_data, inter_ratio=0.5, intra_ratio=0.5, total_edges=1000):
+
+import torch
+import networkx as nx
+from torch_geometric.utils import from_networkx
+from torch_geometric.data import Data
+
+def attach_star_graph_with_features(G_orig: nx.Graph, data: Data, N: int, ig: int):
     """
-    Removes random edges from within and between two graph copies in a controlled way.
-
-    Args:
-        graph_data (Data): The graph structure (PyG format).
-        inter_ratio (float): Fraction of edges to remove **between** the two graph copies.
-        intra_ratio (float): Fraction of edges to remove **within** each graph copy.
-        total_edges (int): Total number of edges to remove.
-
-    Returns:
-        Data: Graph with specified edges removed.
-        torch.Tensor: Tensor of removed edges.
-    """
-    edge_index = graph_data.edge_index.cpu()
-    num_nodes = graph_data.num_nodes // 2
-
-    # Separate edges into intra and inter
-    intra_mask = ((edge_index[0] < num_nodes) & (edge_index[1] < num_nodes)) | \
-                 ((edge_index[0] >= num_nodes) & (edge_index[1] >= num_nodes))
-    inter_mask = ~intra_mask
-
-    intra_edges = edge_index[:, intra_mask]
-    inter_edges = edge_index[:, inter_mask]
-
-    # Determine number of edges to remove
-    num_inter_remove = int(total_edges * inter_ratio)
-    num_intra_remove = total_edges - num_inter_remove
-
-    # Sample edges to remove
-    inter_remove_idx = np.random.choice(inter_edges.shape[1], min(num_inter_remove, inter_edges.shape[1]), replace=False)
-    intra_remove_idx = np.random.choice(intra_edges.shape[1], min(num_intra_remove, intra_edges.shape[1]), replace=False)
-
-    # Mask to keep edges
-    keep_edges = torch.ones(edge_index.shape[1], dtype=torch.bool)
-
-    # Build mapping from full edge index back to edge type masks
-    intra_full_indices = torch.where(intra_mask)[0]
-    inter_full_indices = torch.where(inter_mask)[0]
-
-    keep_edges[intra_full_indices[intra_remove_idx]] = False
-    keep_edges[inter_full_indices[inter_remove_idx]] = False
-
-    # Updated edge index
-    updated_edge_index = edge_index[:, keep_edges]
-    removed_edges = edge_index[:, ~keep_edges]
-
-    return Data(edge_index=updated_edge_index, num_nodes=graph_data.num_nodes, x=graph_data.x), removed_edges
-
-
+    Adds a star graph with N nodes to G_orig, connects center to ig, and fills features
+    of new nodes using the feature of node ig.
     
+    Args:
+        G_orig (nx.Graph): The original graph (NetworkX).
+        data (Data): The original PyG Data object (used for node features).
+        N (int): Number of nodes in the star graph.
+        ig (int): Index in original graph to connect the star.
+    
+    Returns:
+        G_combined (nx.Graph): Combined NetworkX graph.
+        new_data (Data): New PyG Data with updated node features.
+        star_edges (set): Set of new edges added (for protection).
+    """
+    G_combined = G_orig.copy()
+    offset = max(G_combined.nodes) + 1 if len(G_combined.nodes) > 0 else 0
+
+    # 1. Create and relabel star graph
+    G_star = nx.star_graph(N - 1)  # center node = 0
+    mapping = {i: i + offset for i in G_star.nodes}
+    G_star = nx.relabel_nodes(G_star, mapping)
+    center_node_new = mapping[0]
+
+    # 2. Add star to G_combined
+    G_combined.add_nodes_from(G_star.nodes(data=True))
+    G_combined.add_edges_from(G_star.edges(data=True))
+
+    # 3. Connect center of star to node ig
+    G_combined.add_edge(center_node_new, ig)
+
+    # 4. Track added edges
+    star_edges = set(G_star.edges)
+    star_edges.add((center_node_new, ig))
+
+    # 5. Extend feature matrix
+    original_x = data.x
+    ig_feature = original_x[ig]         # shape: [F]
+    num_existing_nodes = original_x.size(0)
+    num_new_nodes = N                   # center + (N - 1) leaves
+
+    # repeat ig_feature N times for new nodes
+    new_feats = ig_feature.unsqueeze(0).repeat(num_new_nodes, 1)  # [N, F]
+    new_x = torch.cat([original_x, new_feats], dim=0)             # [V+N, F]
+
+    # 6. Convert to PyG Data
+    new_data = from_networkx(G_combined)
+    new_data.x = new_x
+
+    return G_combined, new_data, star_edges
+
+
+
+
 
 def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     """
@@ -165,25 +175,22 @@ def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
                                               total_edges=total_edges)
     else:
         updated_graph_data = graph_data
-    # Convert to NetworkX graph for visualization
+
     G = to_networkx(updated_graph_data, to_undirected=True)
     num_nodes = updated_graph_data.num_nodes
-    # print degree distribution 
+
     node_groups, node_labels, new_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, num_nodes=num_nodes, num_iterations=30)
     intra_orbit_edges, inter_orbit_edges = count_automorphic_edges(G, node_labels)
+
+    ig = random.choice(list(G.nodes))
+    N = 20
+    G_data, updated_graph_data, star_edges = attach_star_graph_with_features(G, updated_graph_data, N, ig)
     metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
-    # metrics_after.update({'head': f'{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}'})
-    # csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
-    # file_exists = os.path.isfile(csv_path)
     df = pd.DataFrame([metrics_after])
-    # df.to_csv(csv_path, mode='a', index=False, header=not file_exists)
     print(df)
     
-    # plot_group_size_distribution(group_sizes, args, f'plots/{args.data_name}/group_size_log1p{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
-    # plot_histogram_group_size_log_scale(group_sizes, metrics_after, args, f'plots/{args.data_name}/hist_group_size_log_{args.data_name}_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
-    # plot_graph_visualization(updated_graph_data, node_labels, args,  f'plots/{args.data_name}/wl_test_{args.data_name}_vis_inter{inter_ratio}_intra{intra_ratio}_edges{total_edges}.png')
     print(f"Finished with inter_ratio={inter_ratio}, intra_ratio={intra_ratio}, total_edges={total_edges}")
-    return updated_graph_data, metrics_after 
+    return updated_graph_data, metrics_after, intra_orbit_edges, inter_orbit_edges
 
     
     
@@ -626,8 +633,8 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
 
     args.name_tag = (
         f'{args.data_name}_'
-        f'Orbits_{metrics["Number of Unique Groups (C_auto)"]:.2f}_'
-        f'ArScore_{metrics["automorphism_score"]:.2f}'
+        f'Non_Edge_{metrics:.2f}_'
+        f'ArScore_None'
         f'{args.gnn_model}_'
         f'{args.score_model}_'
         f'inter{inter:.2f}_'
@@ -642,8 +649,8 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
     for run in range(args.runs):
         if args.wandb_log:
             wandb.init(
-                project=f"{args.data_name}_",
-                name=f"{args.data_name}_{args.batch_size}{args.lr}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
+                project=f"{args.data_name}_3",
+                name=f"{args.name_tag}_{args.batch_size}{args.lr}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
             )
             wandb.config.update(args)
         print(f'#################################          Run {run}          #################################')
@@ -723,8 +730,8 @@ def main():
     perturb_disjoint(original_data, args, 0, 0, 0)
     
     disjoint_graph = create_disjoint_graph(original_data)
-    disjoint_graph, _ = perturb_disjoint(disjoint_graph, args, 0, 0, 0)
-    # run_training_pipeline(disjoint_graph, metrics, 0, 0, 0, args)
+    disjoint_graph, metrics, intra_orbit_edges, inter_orbit_edges = perturb_disjoint(disjoint_graph, args, 0, 0, 0)
+    run_training_pipeline(disjoint_graph, intra_orbit_edges+ inter_orbit_edges, 0, 0, 0, args)
     
     if args.data_name == 'Cora':
         # Cora
@@ -746,13 +753,15 @@ def main():
         intra_ratios = [0.5]    
         total_edges_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # np.round(np.arange(0, 40, 2), 2).tolist()# [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] 
         multi_factor = 1
-        
+    
     for inter in inter_ratios:
         for intra in intra_ratios:
             for edge_factor in total_edges_list:
                 total_edges = int(edge_factor * multi_factor)
-                data, metrics = perturb_disjoint(disjoint_graph, args, inter, intra, total_edges)
-                run_training_pipeline(data, metrics, inter, intra, total_edges, args)
+                data, metrics, intra_orbit_edges, inter_orbit_edges = perturb_disjoint(disjoint_graph, args, inter, intra, total_edges)
+                G = to_networkx(data, to_undirected=True)
+                # analyze_automorphisms(data, G)
+                run_training_pipeline(data, intra_orbit_edges+inter_orbit_edges, inter, intra, total_edges, args)
 
 if __name__ == "__main__":
     main()

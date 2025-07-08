@@ -45,6 +45,12 @@ import networkx as nx
 import torch
 from torch_geometric.datasets import Planetoid
 from torch_geometric.data import Data
+import pandas as pd 
+import networkx as nx
+from torch_geometric.utils import from_networkx
+from torch_geometric.data import Data
+
+import random
 
 # %%
 def get_k_hop_subgraph_from_dataset(dataset_name="Cora", num_hops=4, node_idx=0, visualize=True):
@@ -75,6 +81,7 @@ def get_k_hop_subgraph_from_dataset(dataset_name="Cora", num_hops=4, node_idx=0,
 
     # Create subgraph Data object
     sub_x = data.x[subset]
+    sub_x = torch.ones_like(sub_x)
     sub_y = data.y[subset]
     sub_data = Data(x=sub_x, edge_index=sub_edge_index, y=sub_y)
 
@@ -191,7 +198,7 @@ def analyze_automorphisms(data, G):
     for i, ov in zip(G.nodes(), orbits):
             custom_labels[i] = f"{ov}"
 
-    count_automorphic_edges(G, orbits)
+    non_edge = count_automorphic_edges(G, orbits)
     
     # metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
     
@@ -203,11 +210,11 @@ def analyze_automorphisms(data, G):
     #                        figsize=(8, 6), cmap='tab20b')
     # plot_orbit(orbits)
     edge_class_counts, _ = hash_links_by_orbit(G, orbits)
-    from syn_real.plotting import plot_unique_edge_class
+    # from syn_real.plotting import plot_unique_edge_class
     # plot_unique_edge_class(edge_class_counts)
 
     plot_combined_orbit_graph(G, None, orbits, edge_class_counts, custom_labels=custom_labels)
-    return orbits
+    return non_edge
 
 # %%
 
@@ -293,42 +300,139 @@ def add_node_connected_to_node(data, node_idx, copy_feature=True, undirected=Tru
     new_data = Data(x=new_x, edge_index=new_edge_index, y=new_y)
     return new_data
 
-
-# %%
-data = get_k_hop_subgraph_from_dataset(dataset_name="Cora", num_hops=3, node_idx=0, visualize=True)
-print("Before:")
-print("Num nodes:", data.num_nodes)
-print("Num edges:", data.edge_index.size(1))
-
-G = to_networkx(data, to_undirected=True)
-analyze_automorphisms(data, G)
-aug_data = data
-for i in range(10):
+def perturb_disjoint(graph_data, inter_ratio, intra_ratio, total_edges):
+    """
+    Run the experiment with the given parameters.
     
-	aug_data = add_node_connected_to_node(aug_data, node_idx=48, copy_feature=True)
+    Parameters:
+        graph_data (torch_geometric.data.Data): The input graph data.
+        args (argparse.Namespace): Arguments containing dataset name.
+        inter_ratio (float): Fraction of edges to add between the two graph copies.
+        intra_ratio (float): Fraction of edges to add within each graph copy.
+        total_edges (int): Total number of random edges to add.
+    """
+    # Add random edges to the graph
+    if inter_ratio != 0 and intra_ratio != 0 and total_edges != 0:
+        updated_graph_data = add_random_edges(graph_data, 
+                                              inter_ratio=inter_ratio, 
+                                              intra_ratio=intra_ratio, 
+                                              total_edges=total_edges)
+    else:
+        updated_graph_data = graph_data
 
+    G = to_networkx(updated_graph_data, to_undirected=True)
+    num_nodes = updated_graph_data.num_nodes
 
-	print("New nodes:", aug_data.num_nodes)
-	print("New edges:", aug_data.edge_index.size(1))
-
-	aug_G = to_networkx(aug_data, to_undirected=True)
-
-	print(f"Number of nodes in the graph: {aug_data.num_nodes}")
-	analyze_automorphisms(aug_data, aug_G)
-
-# %%
-# inter_ratio = 1
-# intra_ratio = 1
-# total_edges = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-# interval = 1
-# for edges in total_edges:
-#     if inter_ratio != 0 and intra_ratio != 0 and total_edges != 0:
-#         updated_graph_data = add_random_edges(data, inter_ratio=inter_ratio, total_edges=edges*interval*10)
-#         # rewired_data = rewire_edges_regularly(data, keep_prob=0.6)
-#     else:
-#         updated_graph_data = data
+    node_groups, node_labels, new_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, num_nodes=num_nodes, num_iterations=30)
+    non_edges = count_automorphic_edges(G, node_labels)
+    metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
+    df = pd.DataFrame([metrics_after])
+    print(df)
     
-#     G = to_networkx(updated_graph_data, to_undirected=True)
-#     analyze_automorphisms(updated_graph_data, G)
+    print(f"Finished with inter_ratio={inter_ratio}, intra_ratio={intra_ratio}, total_edges={total_edges}")
+    return updated_graph_data, metrics_after 
+
+
+
+
+def attach_star_graph(G_orig: nx.Graph, N: int, ig: int):
+    G_combined = G_orig.copy()
+    offset = max(G_combined.nodes) + 1 if len(G_combined.nodes) > 0 else 0
+
+    G_star = nx.star_graph(N - 1)
+    mapping = {i: i + offset for i in G_star.nodes}
+    G_star = nx.relabel_nodes(G_star, mapping)
+    center_node_new = mapping[0]
+
+    # Add star to combined graph
+    G_combined.add_nodes_from(G_star.nodes(data=True))
+    G_combined.add_edges_from(G_star.edges(data=True))
+
+    # Add connecting edge to original graph
+    G_combined.add_edge(center_node_new, ig)
+
+    # Track star nodes (including connecting edge)
+    star_nodes = set(G_star.nodes)
+    star_edges = set(G_star.edges)
+    star_edges.add((center_node_new, ig))  # include connection edge
+
+    # Convert to PyG
+    data = from_networkx(G_combined)
+    return G_combined, data, star_edges
+
+
+def main():
+	data = get_k_hop_subgraph_from_dataset(dataset_name="Cora", num_hops=3, node_idx=0, visualize=True)
+	print("Before:")
+	print("Num nodes:", data.num_nodes)
+	print("Num edges:", data.edge_index.size(1))
+
+	G = to_networkx(data, to_undirected=True)
+	analyze_automorphisms(data, G)
+
+	G_data = to_networkx(data)
+	N = 10
+	for i in range(1, 100, 10):
+		ig = random.choice(list(G_data.nodes))
+		G_data, _, star_edges = attach_star_graph(G_data, N, ig)
+		G_data = remove_random_edges(G_data, num_edges=N - 1, protected_edges=star_edges)
+		pyg_data = from_networkx(G_data)
+		analyze_automorphisms(pyg_data, G_data)
+
+
+def remove_random_edges(G: nx.Graph, num_edges: int, protected_edges: set):
+	"""
+	Randomly removes num_edges from G excluding those in protected_edges.
+	"""
+	all_edges = set(G.edges)
+	removable_edges = list(all_edges - protected_edges)
+
+	if len(removable_edges) < num_edges:
+		raise ValueError("Not enough removable edges to delete.")
+
+	to_remove = random.sample(removable_edges, num_edges)
+	G.remove_edges_from(to_remove)
+	return G
+
+def add_random_edges(G: nx.Graph, num_edges: int, protected_edges: set = set(), protected_nodes: set = set()):
+    """
+    Randomly adds num_edges to G, avoiding protected_edges and optionally protected_nodes.
+    
+    Args:
+        G (nx.Graph): The graph to modify.
+        num_edges (int): Number of edges to add.
+        protected_edges (set): Edges to avoid adding (e.g., existing or forbidden).
+        protected_nodes (set): Nodes to avoid using in added edges.
+        
+    Returns:
+        G (nx.Graph): Graph with added edges.
+    """
+    import itertools
+
+    existing_edges = set(G.edges)
+    all_nodes = list(G.nodes)
+    
+    # Generate all possible node pairs (i < j) not in protected sets
+    candidate_edges = {
+        (u, v)
+        for u, v in itertools.combinations(all_nodes, 2)
+        if (u, v) not in existing_edges
+        and (v, u) not in existing_edges
+        and (u, v) not in protected_edges
+        and (v, u) not in protected_edges
+        and u not in protected_nodes
+        and v not in protected_nodes
+    }
+
+    if len(candidate_edges) < num_edges:
+        raise ValueError("Not enough candidate edges to add.")
+
+    new_edges = random.sample(list(candidate_edges), num_edges)
+    G.add_edges_from(new_edges)
+    return G
+
+
+if __name__ == "__main__":
+    main()
 
 

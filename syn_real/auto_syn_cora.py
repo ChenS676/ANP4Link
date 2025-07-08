@@ -29,22 +29,14 @@ from baselines.gnn_utils import (GCN,
                                  dot_product, 
                                  ChebGCN, 
                                  MixHopGCN)
-
-import matplotlib.pyplot as plt
-import networkx as nx
 import pandas as pd
 from torch_geometric.utils import (train_test_split_edges, 
 								   to_undirected)
 import copy
-import torch
-import argparse
-from torch_sparse import SparseTensor
 from torch_geometric.datasets import Planetoid 
 from ogb.linkproppred import Evaluator, PygLinkPropPredDataset
 from torch.utils.data import DataLoader
 import wandb
-
-
 from syn_real.gnn_utils  import (evaluate_hits, 
 								 evaluate_auc, 
 								 evaluate_mrr)
@@ -56,15 +48,16 @@ from baselines.gnn_utils import (get_root_dir,
                                  init_seed, 
                                  save_emb)
 
-from syn_real.auto_operation import (create_disjoint_graph, 
-									 add_random_edges)
-
 from graphgps.utility.utils import mvari_str2csv
 from syn_real.gnn_ogb_heart import init_seed
 from syn_real.automorphism import (run_wl_test_and_group_nodes, 
                                    count_automorphic_edges, 
                                    compute_automorphism_metrics)
-
+from syn_real.auto_operation import (create_disjoint_graph, 
+									 add_random_edges)
+from syn_real.syn_datagen import (get_k_hop_subgraph_from_dataset, 
+                                add_node_connected_to_node,
+                                analyze_automorphisms)
 
 # python real_syn_automorphic.py --data_name Citeseer --gnn_model GCN --lr 0.01 --dropout 0.3 --l2 1e-4 --num_layers 1 --num_layers_predictor 3 --hidden_channels 128 --epochs 9999 --kill_cnt 10 --eval_steps 5 --batch_size 1024 
 # python real_syn_automorphic.py --data_name Cora --gnn_model GCN --lr 0.01 --dropout 0.3 --l2 1e-4 --num_layers 1 --num_layers_predictor 3 --hidden_channels 128 --epochs 9999 --kill_cnt 10 --eval_steps 5 --batch_size 1024 
@@ -93,58 +86,6 @@ from syn_real.automorphism import (run_wl_test_and_group_nodes,
 dir_path = get_root_dir()
 log_print = get_logger('testrun', 'log', get_config_dir())
 
-
-def remove_random_edges(graph_data, inter_ratio=0.5, intra_ratio=0.5, total_edges=1000):
-    """
-    Removes random edges from within and between two graph copies in a controlled way.
-
-    Args:
-        graph_data (Data): The graph structure (PyG format).
-        inter_ratio (float): Fraction of edges to remove **between** the two graph copies.
-        intra_ratio (float): Fraction of edges to remove **within** each graph copy.
-        total_edges (int): Total number of edges to remove.
-
-    Returns:
-        Data: Graph with specified edges removed.
-        torch.Tensor: Tensor of removed edges.
-    """
-    edge_index = graph_data.edge_index.cpu()
-    num_nodes = graph_data.num_nodes // 2
-
-    # Separate edges into intra and inter
-    intra_mask = ((edge_index[0] < num_nodes) & (edge_index[1] < num_nodes)) | \
-                 ((edge_index[0] >= num_nodes) & (edge_index[1] >= num_nodes))
-    inter_mask = ~intra_mask
-
-    intra_edges = edge_index[:, intra_mask]
-    inter_edges = edge_index[:, inter_mask]
-
-    # Determine number of edges to remove
-    num_inter_remove = int(total_edges * inter_ratio)
-    num_intra_remove = total_edges - num_inter_remove
-
-    # Sample edges to remove
-    inter_remove_idx = np.random.choice(inter_edges.shape[1], min(num_inter_remove, inter_edges.shape[1]), replace=False)
-    intra_remove_idx = np.random.choice(intra_edges.shape[1], min(num_intra_remove, intra_edges.shape[1]), replace=False)
-
-    # Mask to keep edges
-    keep_edges = torch.ones(edge_index.shape[1], dtype=torch.bool)
-
-    # Build mapping from full edge index back to edge type masks
-    intra_full_indices = torch.where(intra_mask)[0]
-    inter_full_indices = torch.where(inter_mask)[0]
-
-    keep_edges[intra_full_indices[intra_remove_idx]] = False
-    keep_edges[inter_full_indices[inter_remove_idx]] = False
-
-    # Updated edge index
-    updated_edge_index = edge_index[:, keep_edges]
-    removed_edges = edge_index[:, ~keep_edges]
-
-    return Data(edge_index=updated_edge_index, num_nodes=graph_data.num_nodes, x=graph_data.x), removed_edges
-
-
-    
 
 def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     """
@@ -305,7 +246,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='homo')
     parser.add_argument('--data_name', type=str, default="Cora")
     parser.add_argument('--neg_mode', type=str, default='equal')
-    parser.add_argument('--gnn_model', type=str, default='GIN')
+    parser.add_argument('--gnn_model', type=str, default='GCN')
     parser.add_argument('--score_model', type=str, default='mlp_score')
     parser.add_argument('--pt_path', default=f"plots/Citeseer/processed_graph_inter0.5_intra0.5_edges1000_auto0.7200_norm1_0.7676.pt",
                         type=str)
@@ -322,7 +263,7 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--eval_steps', type=int, default=1)
-    parser.add_argument('--runs', type=int, default=1)
+    parser.add_argument('--runs', type=int, default=3)
     parser.add_argument('--kill_cnt',           dest='kill_cnt',      default=20,    type=int,       help='early stopping')
     parser.add_argument('--output_dir', type=str, default='output_test')
     parser.add_argument('--l2',		type=float,             default=0.0,			help='L2 Regularization for Optimizer')
@@ -616,7 +557,7 @@ def run_training_pipeline(data, metrics, par1, par2, par3, args):
     # }
     if args.data_name == 'Cora': 
         args.batch_size = 1024
-        args.lr = 0.01
+        args.lr = 0.001
     elif args.data_name == 'Citeseer':
         args.batch_size = 1024
         args.lr = 0.001
@@ -624,17 +565,8 @@ def run_training_pipeline(data, metrics, par1, par2, par3, args):
         args.batch_size = 2**5
         args.lr = 0.00001
 
-    args.name_tag = (
-        f'{args.data_name}_'
-        # f'Orbits_{0:.2f}_'
-        # f'ArScore_{0:.2f}'
-        f'{args.gnn_model}_'
-        f'{args.score_model}_'
-        f'inter{par1:.2f}_'
-        f'intra{par2:.2f}_'
-        f'total{par3:.0f}_'
-    )
-
+    args.name_tag = args.data_name+ f"_ArScore_{metrics:.2f}_{args.gnn_model}_{args.score_model}_inter{par1:.2f}_intra{par2:.2f}_total{par3:.0f}"
+    
     # for batch_size, lr in itertools.product(hyperparams['batch_size'], hyperparams['lr']):
     #     args.batch_size = batch_size
     #     args.lr = lr
@@ -642,8 +574,8 @@ def run_training_pipeline(data, metrics, par1, par2, par3, args):
     for run in range(args.runs):
         if args.wandb_log:
             wandb.init(
-                project=f"{args.data_name}_2",
-                name=f"{args.data_name}_{par1}_{par2}_{par3}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
+                project=f"{args.data_name}_4",
+                name=f"{args.name_tag}_{par1}_{par2}_{par3}"#{args.name_tag}_{args.gnn_model}_{args.score_model}_{args.runs}"
             )
             wandb.config.update(args)
         print(f'#################################          Run {run}          #################################')
@@ -708,6 +640,84 @@ def run_training_pipeline(data, metrics, par1, par2, par3, args):
     print(args.name_tag)
     mvari_str2csv(args.name_tag, save_dict, f'results/syn_{args.data_name}_{args.gnn_model}tuned.csv')
 
+def remove_random_edges(G: nx.Graph, num_edges: int, protected_edges: set):
+    """
+    Randomly removes num_edges from G excluding those in protected_edges.
+    """
+    all_edges = set(G.edges)
+    removable_edges = list(all_edges - protected_edges)
+
+    if len(removable_edges) < num_edges:
+        raise ValueError("Not enough removable edges to delete.")
+
+    to_remove = random.sample(removable_edges, num_edges)
+    G.remove_edges_from(to_remove)
+    return G
+
+def attach_star_graph(G_orig: nx.Graph, N: int, ig: int):
+    G_combined = G_orig.copy()
+    offset = max(G_combined.nodes) + 1 if len(G_combined.nodes) > 0 else 0
+
+    G_star = nx.star_graph(N - 1)
+    mapping = {i: i + offset for i in G_star.nodes}
+    G_star = nx.relabel_nodes(G_star, mapping)
+    center_node_new = mapping[0]
+
+    # Add star to combined graph
+    G_combined.add_nodes_from(G_star.nodes(data=True))
+    G_combined.add_edges_from(G_star.edges(data=True))
+
+    # Add connecting edge to original graph
+    G_combined.add_edge(center_node_new, ig)
+
+    # Track star nodes (including connecting edge)
+    star_nodes = set(G_star.nodes)
+    star_edges = set(G_star.edges)
+    star_edges.add((center_node_new, ig))  # include connection edge
+
+    # Convert to PyG
+    data = from_networkx(G_combined)
+    data.x = torch.ones((data.num_nodes, 1433))
+    return G_combined, data, star_edges
+
+
+
+def add_random_edges(G: nx.Graph, num_edges: int, protected_edges: set = set(), protected_nodes: set = set()):
+    """
+    Randomly adds num_edges to G, avoiding protected_edges and optionally protected_nodes.
+    
+    Args:
+        G (nx.Graph): The graph to modify.
+        num_edges (int): Number of edges to add.
+        protected_edges (set): Edges to avoid adding (e.g., existing or forbidden).
+        protected_nodes (set): Nodes to avoid using in added edges.
+        
+    Returns:
+        G (nx.Graph): Graph with added edges.
+    """
+    import itertools
+
+    existing_edges = set(G.edges)
+    all_nodes = list(G.nodes)
+    
+    # Generate all possible node pairs (i < j) not in protected sets
+    candidate_edges = {
+        (u, v)
+        for u, v in itertools.combinations(all_nodes, 2)
+        if (u, v) not in existing_edges
+        and (v, u) not in existing_edges
+        and (u, v) not in protected_edges
+        and (v, u) not in protected_edges
+        and u not in protected_nodes
+        and v not in protected_nodes
+    }
+
+    if len(candidate_edges) < num_edges:
+        raise ValueError("Not enough candidate edges to add.")
+
+    new_edges = random.sample(list(candidate_edges), num_edges)
+    G.add_edges_from(new_edges)
+    return G
 
 
 def main():
@@ -720,30 +730,32 @@ def main():
     csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
     file_exists = os.path.isfile(csv_path)
 
-    # %%
-    from syn_real.disjoint import (get_k_hop_subgraph_from_dataset, 
-                                   add_node_connected_to_node,
-                                    analyze_automorphisms)
-    data = get_k_hop_subgraph_from_dataset(dataset_name="Cora", num_hops=8, node_idx=0, visualize=True)
+    data = get_k_hop_subgraph_from_dataset(dataset_name="Cora", num_hops=5, node_idx=0, visualize=True)
     print("Before:")
     print("Num nodes:", data.num_nodes)
     print("Num edges:", data.edge_index.size(1))
 
     G = to_networkx(data, to_undirected=True)
-    analyze_automorphisms(data, G)
-    aug_data = data
-    for i in range(100):
-        
-        aug_data = add_node_connected_to_node(aug_data, node_idx=48, copy_feature=True)
-        print("New nodes:", aug_data.num_nodes)
-        print("New edges:", aug_data.edge_index.size(1))
+    edge_dis = analyze_automorphisms(data, G)
+    run_training_pipeline(data, edge_dis, 0, 0, 0, args)
 
-        aug_G = to_networkx(aug_data, to_undirected=True)
+    
+    G_data = to_networkx(data)
+    N = 10
+    M = 20
+    for i in range(10):
+        ig = random.choice(list(G_data.nodes))
+        G_data, pyg_data, star_edges = attach_star_graph(G_data, N, ig)
+        # Randomly remove N - 1 edges excluding star structure
 
-        print(f"Number of nodes in the graph: {aug_data.num_nodes}")
-        analyze_automorphisms(aug_data, aug_G)
+        G_data = remove_random_edges(G_data, N - 1, protected_edges=star_edges)
+        # Add M random edges, avoiding star structure and original node
+        G_data = add_random_edges(G_data, num_edges=M, protected_edges=star_edges, protected_nodes=set([ig]))
 
-        run_training_pipeline(aug_data, 0, i, 0, 0, args)
+        pyg_data = from_networkx(G_data)
+        edge_dis = analyze_automorphisms(pyg_data, G_data)
+        pyg_data.x = torch.ones((pyg_data.num_nodes, 1433))
+        run_training_pipeline(pyg_data, edge_dis, i, 0, 0, args)
 
 if __name__ == "__main__":
     main()

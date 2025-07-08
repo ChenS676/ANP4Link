@@ -194,7 +194,7 @@ def count_automorphic_edges(G, node_groups):
             inter_orbit_edges += 1
     print(f"Intra-orbit edges: {intra_orbit_edges}, Inter-orbit edges: {inter_orbit_edges}")
     print(f"Non-distinguishable edges: {(intra_orbit_edges+inter_orbit_edges)}")
-    return intra_orbit_edges, inter_orbit_edges
+    return intra_orbit_edges+inter_orbit_edges
 
 
 def compute_automorphism_metrics(orbits, num_nodes):
