@@ -302,7 +302,7 @@ print("Num edges:", data.edge_index.size(1))
 
 G = to_networkx(data, to_undirected=True)
 analyze_automorphisms(data, G)
-
+aug_data = data
 for i in range(10):
     
 	aug_data = add_node_connected_to_node(aug_data, node_idx=48, copy_feature=True)
@@ -315,18 +315,6 @@ for i in range(10):
 
 	print(f"Number of nodes in the graph: {aug_data.num_nodes}")
 	analyze_automorphisms(aug_data, aug_G)
-
-
-# %%
-# Add one node connected to node 42
-aug_data = add_node_connected_to_node(aug_data, node_idx=42, copy_feature=True)
-
-print("Original nodes:", data.num_nodes)
-print("New nodes:", aug_data.num_nodes)
-
-aug_G = to_networkx(aug_data, to_undirected=True)
-analyze_automorphisms(aug_data, aug_G)
-
 
 # %%
 # inter_ratio = 1
