@@ -222,7 +222,7 @@ def randomsplit(dataset, val_ratio: float=0.10, test_ratio: float=0.2):
     return split_edge
 
 # %%
-import matplotlib.pyplot as plt
+
 
 def plot_degree_distribution_stem(G):
     """
