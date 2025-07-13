@@ -153,9 +153,6 @@ def attach_star_graph_with_features(G_orig: nx.Graph, data: Data, N: int, ig: in
     return G_combined, new_data, star_edges
 
 
-
-
-
 def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
     """
     Run the experiment with the given parameters.
