@@ -254,6 +254,20 @@ def adjoverlap(adj1: SparseTensor,
     return adjoverlap
 
 
+import os
+import torch
+from pathlib import Path
+import subprocess
+
+# Find the root of the git repository
+def get_git_root():
+    return subprocess.check_output(
+        ['git', 'rev-parse', '--show-toplevel'], 
+        cwd=os.path.dirname(__file__)
+    ).decode('utf-8').strip()
+
+
+
 if __name__ == "__main__":
     adj1 = SparseTensor.from_edge_index(
         torch.LongTensor([[0, 0, 1, 2, 3], [0, 1, 1, 2, 3]]))

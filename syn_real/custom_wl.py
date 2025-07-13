@@ -1,7 +1,9 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+current_file = os.path.abspath(__file__)
+grandparent_dir = os.path.dirname(os.path.dirname(current_file))
+sys.path.insert(0, grandparent_dir)
 import argparse
 import csv
 import numpy as np
@@ -22,6 +24,9 @@ from scipy.sparse.linalg import eigsh
 from typing import Optional
 from torch_geometric.typing import Adj
 from torch_geometric.utils import train_test_split_edges, to_undirected
+import networkx as nx
+import pynauty
+import argparse
 
 
 
@@ -295,4 +300,54 @@ def higher_order_wl(edge_index, num_nodes, k=2, num_iterations=1000):
                    for i, label in enumerate(unique_labels)}
 
     return node_groups, node_labels
+
+
+
+def get_graph_orbits(graph: nx.Graph) -> list:
+    # Map nodes to consecutive indices
+    node_mapping = {node: idx for idx, node in enumerate(graph.nodes())}
+    
+    # Create adjacency dictionary with remapped indices
+    adj_dict = {
+        node_mapping[node]: [node_mapping[neighbor] for neighbor in graph.neighbors(node)]
+        for node in graph.nodes()
+    }
+    
+    # Construct pynauty graph
+    n = len(graph.nodes())
+    G_pynauty = pynauty.Graph(number_of_vertices=n, adjacency_dict=adj_dict, directed=False)
+    
+    # Compute orbits
+    _, _, _, orbits, num_orbit = pynauty.autgrp(G_pynauty)
+    
+    return orbits, num_orbit
+
+# %%
+def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
+    """
+    Runs the Weisfeiler-Lehman (WL) test and groups nodes with similar hashed labels.
+    
+    Args:
+        edge_index (Tensor): The edge index tensor (2, |E|) representing the graph.
+        num_nodes (int): The number of nodes in the graph.
+        num_iterations (int): Number of WL iterations.
+    
+    Returns:
+        node_groups (dict): Mapping from WL hashes to node sets.
+        node_labels (Tensor): Final hashed labels for each node.
+    """
+    wl = WLConvOptimized()  
+
+    node_labels = np.ones(num_nodes)
+    for _ in range(num_iterations):
+        node_labels = wl(node_labels, edge_index)  
+    # Group nodes based on final hashed values
+    node_groups = {}
+    for node, label in enumerate(node_labels.tolist()):
+        if label not in node_groups:
+            node_groups[label] = []
+        node_groups[label].append(node)
+    _, new_labels = torch.unique(node_labels, return_inverse=True)
+    return node_groups, node_labels, new_labels
+
 

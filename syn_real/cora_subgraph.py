@@ -1,6 +1,6 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, '/pfs/work9/workspace/scratch/ka_cc7738-orbit-gnn/ANP4Link')
 import os
 import sys
 import random
@@ -16,7 +16,8 @@ from torch_geometric.datasets import Planetoid
 from torch_geometric.utils import (
     to_networkx
 )
-
+from torch import Tensor
+from collections import Counter
 from baselines.gnn_utils import (GCN, 
                                  GAT, 
                                  SAGE, 
@@ -61,9 +62,7 @@ from baselines.gnn_utils import (get_root_dir,
                                  save_emb)
 from graphgps.utility.utils import mvari_str2csv
 from syn_real.gnn_ogb_heart import init_seed
-from syn_real.automorphism import (run_wl_test_and_group_nodes, 
-                                   count_automorphic_edges, 
-                                   compute_automorphism_metrics)
+from syn_real.custom_wl import WLConvOptimized, WLConvOptimized
 
 
 # python real_syn_automorphic.py --data_name Citeseer --gnn_model GCN --lr 0.01 --dropout 0.3 --l2 1e-4 --num_layers 1 --num_layers_predictor 3 --hidden_channels 128 --epochs 9999 --kill_cnt 10 --eval_steps 5 --batch_size 1024 
@@ -94,6 +93,113 @@ dir_path = get_root_dir()
 log_print = get_logger('testrun', 'log', get_config_dir())
 DATASET_PATH = '/hkfs/work/workspace/scratch/cc7738-rebuttal/Universal-MP/baselines/dataset'
 PT_LIST = [f"plots/Citeseer/processed_graph_inter0.5_intra0.5_edges1000_auto0.7200_norm1_0.7676.pt"]
+
+
+
+def run_wl_test_and_group_nodes(edge_index, num_nodes, num_iterations=1000):
+    """
+    Runs the Weisfeiler-Lehman (WL) test and groups nodes with similar hashed labels.
+    
+    Args:
+        edge_index (Tensor): The edge index tensor (2, |E|) representing the graph.
+        num_nodes (int): The number of nodes in the graph.
+        num_iterations (int): Number of WL iterations.
+    
+    Returns:
+        node_groups (dict): Mapping from WL hashes to node sets.
+        node_labels (Tensor): Final hashed labels for each node.
+    """
+    # wl = WLConvMultiFeature()  
+    wl = WLConvOptimized()  
+
+    node_labels = np.ones(num_nodes)
+    for _ in range(num_iterations):
+        node_labels = wl(node_labels, edge_index)  
+    # Group nodes based on final hashed values
+    node_groups = {}
+    for node, label in enumerate(node_labels.tolist()):
+        if label not in node_groups:
+            node_groups[label] = []
+        node_groups[label].append(node)
+    _, new_labels = torch.unique(node_labels, return_inverse=True)
+    return node_groups, node_labels, new_labels
+
+
+
+
+def compute_automorphism_metrics(node_groups, num_nodes):
+    """
+    Computes numerical metrics for graph automorphism based on WL node grouping.
+    Args:
+        node_groups (dict): Dictionary mapping WL hash values to lists of node indices.
+        num_nodes (int): Total number of nodes in the graph.
+
+    Returns:
+        dict: Automorphism metrics {A_r1, C_auto, H_auto}
+    """
+    # Compute the size of each group (how many nodes share the same WL label)
+
+    group_sizes = np.array([len(group) for group in node_groups.values()])
+    
+    A_r1 = np.sum(group_sizes**2) / num_nodes**2
+    C_auto = len(node_groups)
+    A_r_norm_1 = 1 + np.log(A_r1) / np.log(num_nodes) # lower is less automorphism
+    A_r_norm_2 = np.log(np.sum(group_sizes**2)) / (2 * np.log(num_nodes)) 
+    A_r_log = (np.log(np.sum(group_sizes**2)) - np.log(num_nodes**2)) / np.log(num_nodes)
+    automorphism_score = (len(node_groups) / num_nodes)
+    return {
+        "Automorphism Ratio (A_r1)": A_r1,
+        "A_r_norm_2": A_r_norm_2,
+        "A_r_norm_1": A_r_norm_1,
+        "Number of Unique Groups (C_auto)": C_auto,
+        "Automorphism Ratio (A_r_log)": A_r_log,
+        "num_nodes": num_nodes,
+        "automorphism_score": automorphism_score
+    }, num_nodes, group_sizes
+
+
+
+def count_automorphic_edges(G, node_groups:list):
+    """
+    Counts intra-orbit and inter-orbit edges in a graph G based on node_groups,
+    excluding nodes that are the only ones in their group.
+
+    Parameters:
+        G (networkx.Graph): The input graph.
+        node_groups (list): A list where the index is the node ID and the value is the orbit/group ID.
+
+    Returns:
+        tuple: (intra_orbit_edges, inter_orbit_edges)
+    """
+    node_groups = node_groups.tolist() if isinstance(node_groups, Tensor) else node_groups
+    group_counts = Counter(node_groups)
+    
+    unique_nodes = set()
+    for i, group in enumerate(node_groups):
+        if group_counts[group] == 1:
+            unique_nodes.add(i)
+
+    valid_nodes = set()
+    for i, group in enumerate(node_groups):
+        if group_counts[group] > 1:
+            valid_nodes.add(i)
+
+    valid_nodes = list(valid_nodes)
+    intra_orbit_edges = 0
+    inter_orbit_edges = 0
+    for u, v in G.edges():
+        # if u in unique_nodes and v in unique_nodes:
+        #     continue 
+        # print(f"u: {u}, v: {v}, group_u: {node_groups[u]}, group_v: {node_groups[v]}")
+        if node_groups[u] == node_groups[v]:
+            intra_orbit_edges += 1
+        else:
+            inter_orbit_edges += 1
+    print(f"Intra-orbit edges: {intra_orbit_edges}, Inter-orbit edges: {inter_orbit_edges}")
+    print(f"Non-distinguishable edges: {(intra_orbit_edges+inter_orbit_edges)}")
+    return intra_orbit_edges, inter_orbit_edges
+
+
 
 
 def remove_random_edges(graph_data, inter_ratio=0.5, intra_ratio=0.5, total_edges=1000):

@@ -1,6 +1,8 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+current_file = os.path.abspath(__file__)
+grandparent_dir = os.path.dirname(os.path.dirname(current_file))
+sys.path.insert(0, grandparent_dir)
 import torch
 
 from syn_real.gnn_utils import get_root_dir, get_logger, get_config_dir, Logger, init_seed, save_emb
@@ -35,9 +37,6 @@ from torch_geometric.utils import (to_undirected,
 # and then expand to synthetic graph
 dir_path = get_root_dir()
 log_print = get_logger('testrun', 'log', get_config_dir())
-DATASET_PATH = '/hkfs/work/workspace/scratch/cc7738-rebuttal/Universal-MP/baselines/dataset'
-
-
 
 def get_metric_score(evaluator_hit, evaluator_mrr, pos_train_pred, pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
 
@@ -326,7 +325,7 @@ def main():
 
     device = f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu'
     device = torch.device(device)
-    dataset = PygLinkPropPredDataset(name=args.data_name, root=DATASET_PATH) 
+    dataset = PygLinkPropPredDataset(name=args.data_name) 
     split_edge = randomsplit(dataset,  val_ratio=0.10, test_ratio=0.2) 
     if data.is_directed():
         data.edge_index = to_undirected(data.edge_index)

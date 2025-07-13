@@ -103,7 +103,8 @@ def plot_graph_with_orbits(G, pos, orbits, custom_labels=None, figsize=(8, 6), c
         edgecolors='black'
     )
     plt.title("Graph Colored by Orbit Labels")
-    plt.savefig('graph_with_orbits.png', bbox_inches='tight')
+    # plt.savefig('graph_with_orbits.png', bbox_inches='tight')
+    plt.show()
     plt.close()
 
 
@@ -127,7 +128,6 @@ def plot_orbit_histogram(orbits, figsize=(6, 4)):
     plt.show()
     plt.close()
     
-
 
 def compute_automorphism_metrics(node_groups, num_nodes):
     """
@@ -158,7 +158,6 @@ def compute_automorphism_metrics(node_groups, num_nodes):
         "num_nodes": num_nodes,
         "automorphism_score": automorphism_score
     }, num_nodes, group_sizes
-
 
 
 def count_automorphic_edges(G, node_groups:list):
@@ -200,7 +199,6 @@ def count_automorphic_edges(G, node_groups:list):
     print(f"Intra-orbit edges: {intra_orbit_edges}, Inter-orbit edges: {inter_orbit_edges}")
     print(f"Non-distinguishable edges: {(intra_orbit_edges+inter_orbit_edges)}")
     return intra_orbit_edges, inter_orbit_edges
-
 
 
 # random split dataset
@@ -289,7 +287,7 @@ def process_random_regular_graph():
         pos = nx.spring_layout(G, seed=42)
         nx.draw(G, pos, with_labels=True, node_color='skyblue', edge_color='gray', node_size=500)
         plt.title(f"Random Regular Graph (n={N}, d={degree})")
-        plt.savefig('random_graph.png')
+        plt.show()
 
         data = from_networkx(G)
         edge_index = data.edge_index
@@ -315,7 +313,7 @@ def process_ERDOS_RENYI():
         pos = nx.spring_layout(G, seed=42)
         nx.draw(G, pos, with_labels=True, node_color='skyblue', edge_color='gray', node_size=500)
         plt.title(f"Random Regular Graph (n={N}, d={degree})")
-        plt.savefig('random_graph.png')
+        plt.show()
 
         data = from_networkx(G)
         edge_index = data.edge_index
@@ -337,6 +335,7 @@ def save_metrics(metrics, graph_type, csv_path='summary.csv'):
     header = not os.path.isfile(csv_path)
     df.to_csv(csv_path, mode='a', index=False, header=header)
     print("Saved to summary.csv")
+    
     
     
 def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
@@ -364,6 +363,7 @@ def process_graph(N, graph_type, pos=None, is_grid=False, label="graph"):
     # save_metrics(metrics, f"{graph_type}_{N}", csv_path='summary.csv')
 
     exit()
+
 
 
 def test_automorphism():
