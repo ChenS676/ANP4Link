@@ -8,7 +8,7 @@ import torch
 from syn_real.gnn_utils import get_root_dir, get_logger, get_config_dir, Logger, init_seed, save_emb
 from syn_real.gnn_utils import GCN, GAT, SAGE, GIN, MF, DGCNN, GCN_seal, SAGE_seal, DecoupleSEAL, mlp_score
 from syn_real.gnn_utils  import evaluate_hits, evaluate_auc, evaluate_mrr
-from data_utils.data_utils import loaddataset, randomsplit
+# from data_utils.data_utils import loaddataset, randomsplit
 # from logger import Logger
 from torch.utils.data import DataLoader
 from torch_sparse import SparseTensor
