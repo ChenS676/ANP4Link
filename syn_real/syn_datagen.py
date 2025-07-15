@@ -207,7 +207,7 @@ def analyze_automorphisms(data, G, visualize=True):
                                 # custom_labels=custom_labels, 
                                 # figsize=(8, 6), cmap='tab20b')
         # plot_orbit(orbits)
-        edge_class_counts, _ = hash_links_by_orbit(G, orbits)
+        edge_class_counts, edge_role_size, max_freq, most_common_edge_classes = hash_links_by_orbit(G, orbits)
         # from syn_real.plotting import plot_unique_edge_class
         # plot_unique_edge_class(edge_class_counts)
         plot_combined_orbit_graph(G, None, orbits, edge_class_counts, custom_labels=custom_labels)

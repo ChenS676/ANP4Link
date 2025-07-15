@@ -22,14 +22,111 @@ import pandas as pd
 from torch_geometric.datasets import Planetoid
 from torch_geometric.utils import k_hop_subgraph, to_networkx
 from torch_geometric.data import Data
-from syn_real.syn_datagen import analyze_automorphisms
+from collections import defaultdict, Counter
+# orbit detection 
+from syn_real.custom_wl import (get_graph_orbits,
+                                run_wl_test_and_group_nodes)
+from syn_real.plotting import plot_graph_with_orbits
+from syn_real.measure import (hash_links_by_orbit, 
+                              compute_automorphism_metrics,
+                              count_automorphic_edges,
+                              create_disjoint_graph
+                            )
+from syn_real.real_syn_automorphic import perturb_disjoint
+from syn_real.syn_datagen import plot_combined_orbit_graph
 
-# %%
+
+
+def hash_links_by_orbit(G: nx.Graph, orbits: list ):
+    """
+    Group and count edges by the sorted orbit pairs they connect.
+
+    Args:
+        G: networkx.Graph
+        node_groups: list of orbit IDs per node (e.g., from WL hashing)
+
+    Returns:
+        edge_class_counts: dict with keys (orbit_a, orbit_b), values are counts
+        edge_classes: list of (orbit_a, orbit_b) tuples in the same order as G.edges()
+    """
+    if type(orbits) is torch.Tensor:
+        orbits = orbits.tolist()
+    node_to_orbit = orbits
+    edge_class_counts = defaultdict(int)
+    edge_classes = []
+
+    try:
+        for u, v in G.edges():
+            orbit_u = node_to_orbit[u]
+            orbit_v = node_to_orbit[v]
+            key = tuple(sorted((orbit_u, orbit_v))) 
+            edge_class_counts[key] += 1
+            edge_classes.append(key)
+    except:
+        # regular graph
+        for links in G.edges():
+            for u, v in links:
+                orbit_u = node_to_orbit[u]
+                orbit_v = node_to_orbit[v]
+                key = tuple(sorted((orbit_u, orbit_v)))
+                edge_class_counts[key] += 1
+                edge_classes.append(key) 
+                   
+    edge_role_size = sorted(list(edge_class_counts.values()), reverse=True)
+    max_freq = max(edge_class_counts.values()) 
+    print("Max frequency:", max_freq)
+
+    max_freq = max(edge_class_counts.values())
+    most_common_keys = [k for k, v in edge_class_counts.items() if v >= max_freq-10]
+    # If you just want one (e.g., the first one), do:
+    most_common_key = most_common_keys[0]
+
+    for u, v in G.edges():
+        orbit_u = node_to_orbit[u]
+        orbit_v = node_to_orbit[v]
+        key = tuple(sorted((orbit_u, orbit_v))) 
+        if key == most_common_key:
+            edge_classes.append((u, v))
+            
+    return edge_class_counts, edge_classes, max_freq
+
+
+def analyze_automorphisms(data, G, visualize=True):
+
+    _, node_labels, orbits = run_wl_test_and_group_nodes(data.edge_index, 
+                                                         num_nodes=data.num_nodes, 
+                                                         num_iterations=100)
+    orbits, num_orbit = get_graph_orbits(G)
+    # print(f"Number of orbits: {num_orbit}")
+
+    (num_automorphic_edges, 
+     num_non_automorphic_edges, 
+     non_automorphic_edges, 
+     automorphic_edges, 
+     auto_nodes, 
+     unique_group_nodes) = count_automorphic_edges(G, orbits)
+    
+    if visualize:
+        custom_labels = {}  
+        for i, ov in zip(G.nodes(), orbits):
+                custom_labels[i] = f"{ov}"
+        edge_class_counts, max_orbit_edges, max_freq = hash_links_by_orbit(G, orbits)
+        
+        plot_combined_orbit_graph(G, 
+                                  None, 
+                                  orbits, 
+                                  edge_class_counts, 
+                                  custom_labels=custom_labels)
+    max_orbit_edges = max_orbit_edges + automorphic_edges[:-len(max_orbit_edges)]
+    return non_automorphic_edges[::45], automorphic_edges[::45], auto_nodes, max_orbit_edges
+
+
 def build_graph(dataset_name="Cora", 
                 num_hops=3, 
                 node_idx=0, 
                 visualize=True,
-                analyze=True):
+                analyze=True, 
+                edges=0):
     """
     Load a dataset and extract a k-hop subgraph around a given node.
 
@@ -56,26 +153,21 @@ def build_graph(dataset_name="Cora",
     sub_x = torch.ones_like(sub_x)
     sub_y = data.y[subset]
     sub_data = Data(x=sub_x, edge_index=sub_edge_index, y=sub_y)
+
+    sub_data, subG_data = create_disjoint_graph(sub_data)
+    sub_data, _, _, _ = perturb_disjoint(sub_data, 0.5, 0.5, edges)
     subG_data = to_networkx(sub_data, to_undirected=True)
     
     for n in subG_data.nodes():
         subG_data.nodes[n]['x'] = [1.0]
         
     if True:
-        (num_automorphic_edges, 
-         num_non_automorphic_edges, 
-         non_automorphic_edges, 
+        (non_automorphic_edges,
          automorphic_edges, 
          auto_nodes, 
-         unique_group_nodes) = analyze_automorphisms(sub_data, subG_data) # classify edges to be automorphic or not
-
-    # (num_automorphic_edges, 
-    #  num_non_automorphic_edges, 
-    #  non_automorphic_edges, 
-    #  automorphic_edges, 
-    #  auto_nodes, 
-    #  unique_group_nodes) = count_automorphic_edges(subG_data, orbits)
-        
+         most_common_edge_classes) = analyze_automorphisms(sub_data, subG_data) 
+    
+    # non_automorphic_edges, automorphic_edges, auto_nodes, most_common_edge_classes
     if visualize:
         plt.figure(figsize=(8, 6))
         nx.draw(subG_data, with_labels=True, node_size=300, 
@@ -86,7 +178,9 @@ def build_graph(dataset_name="Cora",
         
     print("Num nodes:", data.num_nodes)
     print("Num edges:", data.edge_index.size(1))
-    return sub_data, automorphic_edges, auto_nodes, subG_data
+
+    return sub_data, non_automorphic_edges[::45], automorphic_edges[::45], auto_nodes, most_common_edge_classes, subG_data
+
 
 # %%
 class GCN(torch.nn.Module):
@@ -108,8 +202,9 @@ class LinkPredictor(torch.nn.Module):
         return torch.sigmoid(self.lin(torch.cat([x_i, x_j], dim=-1))).squeeze(-1)
 
 # %%
-def run():
-    data, auto_edges, auto_nodes, G_nx = build_graph()
+def run(N):
+    data, non_auto_edges, auto_edges, auto_nodes, most_common_edge_classes, G_nx = build_graph(N)
+    
     edge_index = data.edge_index
     data.x = torch.tensor([d['x'] for _, d in G_nx.nodes(data=True)], dtype=torch.float)
 
@@ -152,6 +247,13 @@ def run():
         s, d = int(all_edge_index[0, i]), int(all_edge_index[1, i])
         pred = predictor(x[s].unsqueeze(0), x[d].unsqueeze(0)).item()
         t = 'A' if (s,d) in auto_edges or (d,s) in auto_edges else 'NA'
+        
+        if  (s,d) in most_common_edge_classes or (d,s) in most_common_edge_classes:
+            t = 'M'
+        elif  (s,d) in auto_edges or (d,s) in auto_edges:
+            t = 'A'
+        else:
+            t = 'NA'
         preds.append(pred)
         types.append(t)
 
@@ -162,6 +264,6 @@ def run():
     plt.ylabel("Score")
     plt.show()
 
-run()
+run(edges=0)
 
 

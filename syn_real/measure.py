@@ -158,7 +158,13 @@ def hash_links_by_orbit(G: nx.Graph, orbits: list ):
                 edge_class_counts[key] += 1
                 edge_classes.append(key)    
     edge_role_size = sorted(list(edge_class_counts.values()), reverse=True)
-    return edge_class_counts, edge_role_size
+    max_freq = max(edge_class_counts.values())
+    most_common_edge_classes = [k for k, v in edge_class_counts.items() if v == max_freq]
+
+    print("Max frequency:", max_freq)
+    print("Most common edge classes:", most_common_edge_classes)
+
+    return edge_class_counts, edge_role_size, max_freq, most_common_edge_classes
 
 
 import itertools

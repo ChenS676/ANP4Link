@@ -1,14 +1,14 @@
 # %%
 import os
-import sys
-from collections import Counter
-# Add project path
-# notebook_path = os.getcwd()
-# sys.path.insert(0, os.path.dirname(notebook_path))
+import sys 
+
+notebook_path = os.getcwd()
+sys.path.insert(0, os.path.dirname(notebook_path))
 
 current_file = os.path.abspath(__file__)
 grandparent_dir = os.path.dirname(os.path.dirname(current_file))
 sys.path.insert(0, grandparent_dir)
+
 
 import torch
 import torch.nn.functional as F
@@ -19,76 +19,45 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 import pandas as pd
-from torch_geometric.datasets import Planetoid
-from torch_geometric.utils import k_hop_subgraph, to_networkx
-from torch_geometric.data import Data
+import numpy as np 
+
 from syn_real.syn_datagen import analyze_automorphisms
 
-# %%
-def build_graph(dataset_name="Cora", 
-                num_hops=3, 
-                node_idx=0, 
-                visualize=True,
-                analyze=True):
-    """
-    Load a dataset and extract a k-hop subgraph around a given node.
 
-    Args:
-        dataset_name (str): e.g. "Cora", "Citeseer", "PubMed"
-        num_hops (int): Number of hops to include in the subgraph
-        node_idx (int): Center node to extract from
-        visualize (bool): If True, visualize the subgraph
+# %% Generate graph
+def lobster(N, seed):
+    """ Creates a random Lobster graph with a backbone of size b (drawn from U[1, N)), and p (drawn
+        from U[1, N − b ]) pendent vertices uniformly connected to the backbone, and additional
+        N − b − p pendent vertices uniformly connected to the previous pendent vertices """
+    np.random.seed(seed)
+    B = np.random.randint(low=1, high=N)
+    F = np.random.randint(low=B + 1, high=N + 1)
+    G = nx.empty_graph(N)
+    for i in range(1, B):
+        G.add_edge(i - 1, i)
+    for i in range(B, F):
+        G.add_edge(i, np.random.randint(B))
+    for i in range(F, N):
+        G.add_edge(i, np.random.randint(low=B, high=F))
 
-    Returns:
-        Data: PyG Data object of the subgraph
-    """
-    # Load dataset
-    dataset = Planetoid(root=f'{dataset_name}', name=dataset_name)
-    data = dataset[0]
-    subset, sub_edge_index, mapping, edge_mask = k_hop_subgraph(
-        node_idx=node_idx,
-        num_hops=num_hops,
-        edge_index=data.edge_index,
-        relabel_nodes=True,
-        num_nodes=data.num_nodes
-    )
-    sub_x = data.x[subset]
-    sub_x = torch.ones_like(sub_x)
-    sub_y = data.y[subset]
-    sub_data = Data(x=sub_x, edge_index=sub_edge_index, y=sub_y)
-    subG_data = to_networkx(sub_data, to_undirected=True)
+    for n in G.nodes():
+        G.nodes[n]['x'] = [1.0]
     
-    for n in subG_data.nodes():
-        subG_data.nodes[n]['x'] = [1.0]
-        
-    if True:
-        (num_automorphic_edges, 
-         num_non_automorphic_edges, 
-         non_automorphic_edges, 
-         automorphic_edges, 
-         auto_nodes, 
-         unique_group_nodes) = analyze_automorphisms(sub_data, subG_data) # classify edges to be automorphic or not
+    pyg_data = from_networkx(G)
+    auto_edges = []
+    auto_nodes = []
 
-    # (num_automorphic_edges, 
-    #  num_non_automorphic_edges, 
-    #  non_automorphic_edges, 
-    #  automorphic_edges, 
-    #  auto_nodes, 
-    #  unique_group_nodes) = count_automorphic_edges(subG_data, orbits)
-        
-    if visualize:
-        plt.figure(figsize=(8, 6))
-        nx.draw(subG_data, with_labels=True, node_size=300, 
-                node_color='skyblue', edge_color='gray')
-        plt.title(f"{num_hops}-Hop Subgraph from Node {node_idx} ({dataset_name})")
-        plt.axis('off')
-        plt.show()
-        
-    print("Num nodes:", data.num_nodes)
-    print("Num edges:", data.edge_index.size(1))
-    return sub_data, automorphic_edges, auto_nodes, subG_data
+    (num_automorphic_edges, 
+    num_non_automorphic_edges, 
+    non_automorphic_edges, 
+    auto_edges, 
+    auto_nodes, 
+    unique_group_nodes) = analyze_automorphisms(pyg_data, G) # classify edges to be automorphic or not
 
-# %%
+    return pyg_data, auto_edges, auto_nodes, G
+
+
+# %% GCN model
 class GCN(torch.nn.Module):
     def __init__(self, in_dim, hidden_dim):
         super().__init__()
@@ -107,9 +76,9 @@ class LinkPredictor(torch.nn.Module):
     def forward(self, x_i, x_j):
         return torch.sigmoid(self.lin(torch.cat([x_i, x_j], dim=-1))).squeeze(-1)
 
-# %%
-def run():
-    data, auto_edges, auto_nodes, G_nx = build_graph()
+# %% Training and visualization
+def run(N):
+    data, auto_edges, auto_nodes, G_nx = lobster(N, 0)
     edge_index = data.edge_index
     data.x = torch.tensor([d['x'] for _, d in G_nx.nodes(data=True)], dtype=torch.float)
 
@@ -134,19 +103,28 @@ def run():
     model.eval()
     x = model(data.x, edge_index).detach()
 
-    tsne = TSNE(n_components=2, perplexity=2, random_state=0)
+
+    tsne = TSNE(n_components=2, perplexity=2,random_state=0)
     x_2d = tsne.fit_transform(x.numpy())
 
     # Plot node embeddings
     plt.figure(figsize=(8,6))
     for i, (x_, y_) in enumerate(x_2d):
-        color = 'red' if i in auto_nodes else 'blue'
+        color = 'red' if i in [0,1,2,3] else 'blue'
         plt.scatter(x_, y_, c=color)
         plt.text(x_ + 0.02, y_ + 0.02, str(i), fontsize=9)
     plt.title("2D Visualization of Node Embeddings")
-    plt.show()
-    
-    
+    plt.savefig('result.pdf')
+
+
+    pos = nx.spring_layout(G_nx, seed=42)
+    node_colors = ['red' if n in [0,1,2,3] else 'skyblue' for n in G_nx.nodes()]
+    plt.figure(figsize=(6,6))
+    nx.draw(G_nx, pos, with_labels=True, node_color=node_colors, node_size=600)
+    plt.title("Original Graph (Red = Automorphic Nodes)")
+    plt.savefig('result.pdf')
+
+
     preds, types = [], []
     for i in range(all_edge_index.shape[1]):
         s, d = int(all_edge_index[0, i]), int(all_edge_index[1, i])
@@ -160,8 +138,14 @@ def run():
     plt.title("Link Prediction Score by Edge Type")
     plt.suptitle("")
     plt.ylabel("Score")
-    plt.show()
-
-run()
+    plt.savefig('result.pdf')
 
 
+
+run(20)
+
+
+run(40)
+
+
+run(60)

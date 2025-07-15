@@ -175,9 +175,8 @@ def perturb_disjoint(graph_data, inter_ratio, intra_ratio, total_edges):
 
     G = to_networkx(updated_graph_data, to_undirected=True)
     
-
     ig = random.choice(list(G.nodes))
-    N = 20
+    N = 40
     G_data, updated_graph_data, star_edges = attach_star_graph_with_features(G, updated_graph_data, N, ig)
 
 
