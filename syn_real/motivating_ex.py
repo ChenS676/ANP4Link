@@ -765,3 +765,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# TODO calc automorphism score make sure it has big dynamic range 
+# TODO add models LINKX, GCN-Cheby, MixHop, SAGE, GCN
+# TODO generate plot in pdf. and replace it in paper, 
+# TODO update description in paper
