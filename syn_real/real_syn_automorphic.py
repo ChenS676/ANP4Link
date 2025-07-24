@@ -724,10 +724,10 @@ def main():
     csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
     file_exists = os.path.isfile(csv_path)
     original_data = load_real_world_graph(args.data_name)
-    perturb_disjoint(original_data, args, 0, 0, 0)
+    perturb_disjoint(original_data, 0, 0, 0)
     
     disjoint_graph = create_disjoint_graph(original_data)
-    disjoint_graph, metrics, intra_orbit_edges, inter_orbit_edges = perturb_disjoint(disjoint_graph, args, 0, 0, 0)
+    disjoint_graph, metrics, intra_orbit_edges, inter_orbit_edges = perturb_disjoint(disjoint_graph, 0, 0, 0)
     run_training_pipeline(disjoint_graph, intra_orbit_edges+ inter_orbit_edges, 0, 0, 0, args)
     
     if args.data_name == 'Cora':
@@ -755,7 +755,7 @@ def main():
         for intra in intra_ratios:
             for edge_factor in total_edges_list:
                 total_edges = int(edge_factor * multi_factor)
-                data, metrics, intra_orbit_edges, inter_orbit_edges = perturb_disjoint(disjoint_graph, args, inter, intra, total_edges)
+                data, metrics, intra_orbit_edges, inter_orbit_edges = perturb_disjoint(disjoint_graph, inter, intra, total_edges)
                 G = to_networkx(data, to_undirected=True)
                 # analyze_automorphisms(data, G)
                 run_training_pipeline(data, intra_orbit_edges+inter_orbit_edges, inter, intra, total_edges, args)

@@ -8,14 +8,21 @@ import torch
 import networkx as nx
 import matplotlib.pyplot as plt
 import scipy.sparse as sp
+from torch import Tensor
 from torch_sparse import SparseTensor
 from torch_geometric.data import Data
+from torch_geometric.nn.models import MLP
 from torch_geometric.datasets import Planetoid
 from torch_geometric.utils import (
     to_networkx,
     from_networkx
 )
-
+from torch.nn import BatchNorm1d, Parameter
+from torch_geometric.nn import inits
+from torch_geometric.nn.conv import MessagePassing
+import math
+from torch_geometric.typing import Adj, OptTensor
+from torch_geometric.utils import spmm
 from baselines.gnn_utils import (GCN, 
                                  GAT, 
                                  SAGE, 
@@ -43,12 +50,9 @@ from torch_geometric.datasets import Planetoid
 from ogb.linkproppred import Evaluator, PygLinkPropPredDataset
 from torch.utils.data import DataLoader
 import wandb
-
-
 from syn_real.gnn_utils  import (evaluate_hits, 
 								 evaluate_auc, 
 								 evaluate_mrr)
-
 from baselines.gnn_utils import (get_root_dir, 
                                  get_logger, 
                                  get_config_dir, 
@@ -58,13 +62,143 @@ from baselines.gnn_utils import (get_root_dir,
 from syn_real.auto_syn_cora import analyze_automorphisms, remove_random_edges   
 from syn_real.auto_operation import (create_disjoint_graph, 
 									 add_random_edges)
-
 from graphgps.utility.utils import mvari_str2csv
 from syn_real.gnn_ogb_heart import init_seed
 from syn_real.automorphism import (run_wl_test_and_group_nodes, 
                                    count_automorphic_edges, 
                                    compute_automorphism_metrics)
 
+
+
+
+class SparseLinear(MessagePassing):
+    def __init__(self, in_channels: int, out_channels: int, bias: bool = True):
+        super().__init__(aggr='add')
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+
+        self.weight = Parameter(torch.empty(in_channels, out_channels))
+        if bias:
+            self.bias = Parameter(torch.empty(out_channels))
+        else:
+            self.register_parameter('bias', None)
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        inits.kaiming_uniform(self.weight, fan=self.in_channels,
+                              a=math.sqrt(5))
+        inits.uniform(self.in_channels, self.bias)
+
+    def forward(
+        self,
+        edge_index: Adj,
+        edge_weight: OptTensor = None,
+    ) -> Tensor:
+        # propagate_type: (weight: Tensor, edge_weight: OptTensor)
+        out = self.propagate(edge_index, weight=self.weight,
+                             edge_weight=edge_weight)
+
+        if self.bias is not None:
+            out = out + self.bias
+
+        return out
+
+    def message(self, weight_j: Tensor, edge_weight: OptTensor) -> Tensor:
+        if edge_weight is None:
+            return weight_j
+        else:
+            return edge_weight.view(-1, 1) * weight_j
+
+    def message_and_aggregate(self, adj_t: Adj, weight: Tensor) -> Tensor:
+        return spmm(adj_t, weight, reduce=self.aggr)
+
+
+
+class LINKX(torch.nn.Module):
+    r"""The LINKX model from the `"Large Scale Learning on Non-Homophilous
+    Graphs: New Benchmarks and Strong Simple Methods"
+    <https://arxiv.org/abs/2110.14446>`_ paper.
+
+    """
+    def __init__(
+        self,
+        num_nodes: int,
+        in_channels: int,
+        hidden_channels: int,
+        out_channels: int,
+        num_layers: int,
+        num_edge_layers: int = 1,
+        num_node_layers: int = 1,
+        dropout: float = 0.0,
+    ):
+        super().__init__()
+
+        self.num_nodes = num_nodes
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.num_edge_layers = num_edge_layers
+
+        self.edge_lin = SparseLinear(num_nodes, hidden_channels)
+
+        if self.num_edge_layers > 1:
+            self.edge_norm = BatchNorm1d(hidden_channels)
+            channels = [hidden_channels] * num_edge_layers
+            self.edge_mlp = MLP(channels, dropout=0., act_first=True)
+        else:
+            self.edge_norm = None
+            self.edge_mlp = None
+
+        channels = [in_channels] + [hidden_channels] * num_node_layers
+        self.node_mlp = MLP(channels, dropout=0., act_first=True)
+
+        self.cat_lin1 = torch.nn.Linear(hidden_channels, hidden_channels)
+        self.cat_lin2 = torch.nn.Linear(hidden_channels, hidden_channels)
+
+        channels = [hidden_channels] * num_layers + [out_channels]
+        self.final_mlp = MLP(channels, dropout=dropout, act_first=True)
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        r"""Resets all learnable parameters of the module."""
+        self.edge_lin.reset_parameters()
+        if self.edge_norm is not None:
+            self.edge_norm.reset_parameters()
+        if self.edge_mlp is not None:
+            self.edge_mlp.reset_parameters()
+        self.node_mlp.reset_parameters()
+        self.cat_lin1.reset_parameters()
+        self.cat_lin2.reset_parameters()
+        self.final_mlp.reset_parameters()
+
+    def forward(
+        self,
+        x: OptTensor,
+        edge_index: Adj,
+        edge_weight: OptTensor = None,
+    ) -> Tensor:
+        """"""  # noqa: D419
+        out = self.edge_lin(edge_index, edge_weight)
+
+        if self.edge_norm is not None and self.edge_mlp is not None:
+            out = out.relu_()
+            out = self.edge_norm(out)
+            out = self.edge_mlp(out)
+
+        out = out + self.cat_lin1(out)
+
+        if x is not None:
+            x = self.node_mlp(x)
+            out = out + x
+            out = out + self.cat_lin2(x)
+
+        return self.final_mlp(out.relu_())
+
+    def __repr__(self) -> str:
+        return (f'{self.__class__.__name__}(num_nodes={self.num_nodes}, '
+                f'in_channels={self.in_channels}, '
+                f'out_channels={self.out_channels})')
 
 # python real_syn_automorphic.py --data_name Citeseer --gnn_model GCN --lr 0.01 --dropout 0.3 --l2 1e-4 --num_layers 1 --num_layers_predictor 3 --hidden_channels 128 --epochs 9999 --kill_cnt 10 --eval_steps 5 --batch_size 1024 
 # python real_syn_automorphic.py --data_name Cora --gnn_model GCN --lr 0.01 --dropout 0.3 --l2 1e-4 --num_layers 1 --num_layers_predictor 3 --hidden_channels 128 --epochs 9999 --kill_cnt 10 --eval_steps 5 --batch_size 1024 
@@ -153,7 +287,7 @@ def attach_star_graph_with_features(G_orig: nx.Graph, data: Data, N: int, ig: in
     return G_combined, new_data, star_edges
 
 
-def perturb_disjoint(graph_data, inter_ratio, intra_ratio, total_edges, i):
+def perturb_disjoint(graph_data, inter_ratio, intra_ratio, total_edges):
     """
     Run the experiment with the given parameters.
     
@@ -176,32 +310,24 @@ def perturb_disjoint(graph_data, inter_ratio, intra_ratio, total_edges, i):
     else:
         updated_graph_data = graph_data
 
-    # G = remove_random_edges(to_networkx(updated_graph_data, to_undirected=True), 
-    #                                          num_edges=total_edges)
     G = to_networkx(updated_graph_data, to_undirected=True)
     ig = random.choice(list(G.nodes))
-    N = 100
+    N = 40
     G_data, updated_graph_data, star_edges = attach_star_graph_with_features(G, updated_graph_data, N, ig)
+    num_nodes = updated_graph_data.num_nodes
+    node_groups, node_labels, new_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, num_nodes=num_nodes, num_iterations=30)
+    intra_orbit_edges, inter_orbit_edges = count_automorphic_edges(G_data, node_labels, 0)
+    metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
 
-    # node_groups, node_labels, new_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, 
-    #                                                                    num_nodes=updated_graph_data.num_nodes, 
-    #                                                                    num_iterations=30)
-    from syn_real.custom_wl import get_graph_orbits
-    from syn_real.measure import (hash_links_by_orbit, 
-                                compute_automorphism_metrics,
-                                count_automorphic_edges)
-    orbits, num_orbit = get_graph_orbits(G_data)
-    metrics_after = count_automorphic_edges(G_data, orbits)
-    # intra_orbit_edges, inter_orbit_edges = count_automorphic_edges(G_data, node_labels, i)
-    # metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, updated_graph_data.num_nodes)
-    # df = pd.DataFrame([metrics_after])
-    # print(df)
+    df = pd.DataFrame([metrics_after])
+    print(df)
     
-    # print(f"Finished with inter_ratio={inter_ratio}, intra_ratio={intra_ratio}, total_edges={total_edges}")
-    return updated_graph_data, metrics_after
+    print(f"Finished with inter_ratio={inter_ratio}, intra_ratio={intra_ratio}, total_edges={total_edges}")
+    return updated_graph_data, metrics_after, intra_orbit_edges, inter_orbit_edges
 
     
-from torch_geometric.utils import k_hop_subgraph, to_networkx
+    
+# --- 1️⃣ Load Real-World Graph (Cora) ---
 def load_real_world_graph(dataset_name="Cora"):
     """
     Load a real-world graph dataset (e.g., Cora) from PyTorch Geometric.
@@ -213,21 +339,11 @@ def load_real_world_graph(dataset_name="Cora"):
     if dataset_name in ['Cora', 'Citeseer', 'PubMed']:
         dataset = Planetoid(root='/tmp/' + dataset_name, name=dataset_name)
         data = dataset[0]  
-        return data
-    # (dataset_name="Cora", num_hops=3, node_idx=0, visualize=True)
-    # subset, sub_edge_index, mapping, edge_mask = k_hop_subgraph(
-    #     node_idx=0,
-    #     num_hops=3,
-    #     edge_index=data.edge_index,
-    #     relabel_nodes=True,
-    #     num_nodes=data.num_nodes
-    # )
-
-    # sub_x = data.x[subset]
-    # sub_y = data.y[subset]
-
-    # return Data(x=sub_x, edge_index=sub_edge_index, y=sub_y)
-
+        # data.x = torch.eye(data.num_nodes, dtype=torch.float)
+        # data.x = torch.rand(data.num_nodes, data.num_nodes)
+    elif dataset_name.startswith('ogbl'):
+        pass
+    return data
 
 
 def plot_group_size_distribution(group_sizes, args, file_name):
@@ -329,7 +445,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='homo')
     parser.add_argument('--data_name', type=str, default="Cora")
     parser.add_argument('--neg_mode', type=str, default='equal')
-    parser.add_argument('--gnn_model', type=str, default='ChebGCN', choices=['MixHopGCN', 'GCN', 'GIN', 'LINKX', 'ChebGCN'])
+    parser.add_argument('--gnn_model', type=str, default='LINKX', choices=['MixHopGCN', 'GCN', 'GIN', 'LINKX'])
     parser.add_argument('--score_model', type=str, default='mlp_score')
     parser.add_argument('--pt_path', default=f"plots/Citeseer/processed_graph_inter0.5_intra0.5_edges1000_auto0.7200_norm1_0.7676.pt",
                         type=str)
@@ -396,7 +512,7 @@ def randomsplit(data, val_ratio: float = 0.05, test_ratio: float = 0.15):
     split_edge['valid']['edge'] = removerepeated(data.val_pos_edge_index[:, -num_val:]).t()
     split_edge['valid']['edge_neg'] = removerepeated(data.val_neg_edge_index).t()
     
-    # anti-based evaluation, set test edge size the same.
+    # test edges
     split_edge['test']['edge'] = removerepeated(data.test_pos_edge_index).t()[:1610, :]
     split_edge['test']['edge_neg'] = removerepeated(data.test_neg_edge_index).t()[:1610, :]
     return split_edge
@@ -416,12 +532,13 @@ def data2dict(data, splits, data_name) -> dict:
         datadict.update({'test_neg': splits['test']['edge_neg']})   
         datadict.update({'train_val': torch.cat([splits['valid']['edge'], splits['train']['edge']])})
         datadict.update({'x': data.x}) 
+        datadict.update({'edge_weight': data.edge_weight})
     else:
         raise ValueError('data_name not supported')
     return datadict
 
 
-def train(model, score_func, train_pos, x, optimizer, batch_size):
+def train(model, score_func, train_pos, data, x, optimizer, batch_size):
     model.train()
     score_func.train()
 
@@ -442,8 +559,10 @@ def train(model, score_func, train_pos, x, optimizer, batch_size):
         edge_weight_mask = torch.ones(train_edge_mask.size(1)).to(torch.float).to(train_pos.device)
         x = x.to(train_pos.device)
         adj = SparseTensor.from_edge_index(train_edge_mask, edge_weight_mask, [num_nodes, num_nodes]).to(train_pos.device)
-        h = model(x, adj)
+        # h = model(x, adj)
         
+        h = model(x, adj, data['edge_weight'])
+
         edge = train_pos[perm].t()
         pos_out = score_func(h[edge[0]], h[edge[1]])
         pos_loss = -torch.log(pos_out + 1e-15).mean()
@@ -482,8 +601,9 @@ def test(model, score_func, data, x, evaluator_hit, evaluator_mrr, batch_size):
     model.eval()
     score_func.eval()
     # adj_t = adj_t.transpose(1,0)
-    h = model(x, data['adj'].to(x.device))
-    # print(h[0][:10])
+    # h = model(x, data['adj'].to(x.device))
+    h = model(x, data.adj_t.to(x.device))
+
     x = h
     pos_train_pred = test_edge(score_func, data['train_val'], h, batch_size)
     neg_valid_pred = test_edge(score_func, data['valid_neg'], h, batch_size)
@@ -541,7 +661,8 @@ def test(model, score_func, data, x, evaluator_hit, evaluator_mrr, batch_size):
     model.eval()
     score_func.eval()
     # adj_t = adj_t.transpose(1,0)
-    h = model(x, data['adj'].to(x.device))
+    # h = model(x, data['adj'].to(x.device))
+    h = model(x, data['adj'])
     # print(h[0][:10])
     x = h
     pos_train_pred = test_edge(score_func, data['train_val'], h, batch_size)
@@ -590,6 +711,7 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
     G = to_networkx(data)
     stats = get_graph_statistics(G, graph_name=args.data_name)
     print(stats)
+    
     data.adj_t = SparseTensor.from_edge_index(
         data.edge_index, sparse_sizes=(data.num_nodes, data.num_nodes)
     ).to_symmetric().coalesce()
@@ -599,25 +721,33 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
         for key2 in split_edge[key1]:
             print(key1, key2, split_edge[key1][key2].shape[0])
     data.edge_index = to_undirected(split_edge["train"]["edge"].t())
-    data = data2dict(data, split_edge, args.data_name)
+    
+    # parameters
+    n_nodes = data.num_nodes
+    in_channels = data.x.size(1)
+    
+    # datadict = data2dict(data, split_edge, args.data_name)
     device = torch.device(f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu')
     x = data['x'].to(device)
     if args.cat_n2v_feat:
         print('cat n2v embedding!!')
         n2v_emb = torch.load(os.path.join(get_root_dir(), 'dataset', args.data_name + '-n2v-embedding.pt'))
         x = torch.cat((x, n2v_emb), dim=-1)
+
+    data.edge_weight = torch.ones((data.edge_index.size(1), 1))
+    data = data2dict(data, split_edge, args.data_name)
     train_pos = data['train_pos'].to(x.device)
-    node_num = x.size(0)
-    input_channel = x.size(1)
-    
     if args.gnn_model == 'MixHopGCN':
         args.num_layers = 1
-        
-    model = eval(args.gnn_model)(input_channel, args.hidden_channels,
-                    args.hidden_channels, args.num_layers, args.dropout, 
-                    mlp_layer=args.gin_mlp_layer, head=args.gat_head, 
-                    node_num=node_num, cat_node_feat_mf=args.cat_node_feat_mf,  
-                    data_name=args.data_name).to(device)
+
+    model = LINKX(
+        num_nodes=n_nodes,
+        in_channels=in_channels,
+        hidden_channels=args.hidden_channels,
+        out_channels=args.hidden_channels,
+        num_layers=args.num_layers,
+        dropout=args.dropout
+    )
     
     if args.gnn_model == 'MixHopGCN':
         args.hidden_channels = 3 * args.hidden_channels
@@ -654,7 +784,7 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
     args.name_tag = (
         f'{args.data_name}_'
         f'Non_Edge_{metrics:.2f}_'
-        f'ArScore_None'
+        f'ArScore_{0:.4f}_'
         f'{args.gnn_model}_'
         f'{args.score_model}_'
         f'inter{inter:.2f}_'
@@ -692,7 +822,7 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
         )
         best_valid, best_test, kill_cnt, step = 0, 0, 0, 0
         for epoch in range(1, args.epochs + 1):
-            loss = train(model, score_func, train_pos, x, optimizer, args.batch_size)
+            loss = train(model, score_func, train_pos, data, x, optimizer, args.batch_size)
             if epoch % args.eval_steps == 0:
                 results_rank, score_emb = test(
                     model, score_func, data, x,
@@ -733,7 +863,8 @@ def run_training_pipeline(data, metrics, inter, intra, total_edges, args):
             print(save_dict)
     print(best_metric_valid_str + ' ' + best_auc_valid_str)
     print(args.name_tag)
-    mvari_str2csv(args.name_tag, save_dict, f'results/syn_{args.data_name}_{args.gnn_model}tuned.csv')
+    root = '/pfs/work9/workspace/scratch/ka_cc7738-orbit-gnn/ANP4Link/syn_real/'
+    mvari_str2csv(args.name_tag, save_dict, f'{root}results/syn_{args.data_name}_{args.gnn_model}tuned.csv')
 
 
 
@@ -747,22 +878,18 @@ def main():
     csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
     file_exists = os.path.isfile(csv_path)
     original_data = load_real_world_graph(args.data_name)
-    
-    i = 0
-    perturb_disjoint(original_data, 0, 0, 0, i)
-    i += 1
+    perturb_disjoint(original_data, 0, 0, 0)
     
     disjoint_graph = create_disjoint_graph(original_data)
-    disjoint_graph, metrics = perturb_disjoint(disjoint_graph, 0, 0, 0, i)
-    i += 1
-    # run_training_pipeline(disjoint_graph, intra_orbit_edges+ inter_orbit_edges, 0, 0, 0, args)
+    disjoint_graph, metrics, intra_orbit_edges, inter_orbit_edges = perturb_disjoint(disjoint_graph, 0, 0, 0)
+    run_training_pipeline(disjoint_graph, intra_orbit_edges+ inter_orbit_edges, 0, 0, 0, args)
     
     if args.data_name == 'Cora':
         # Cora
         inter_ratios = [0.1]   
         intra_ratios =  [0.5]
         total_edges_list =  [0.2, 1, 4, 7, 12, 18, 20, 28] #  
-        multi_factor = 200
+        multi_factor = 100 # 250
 
     elif args.data_name == 'Citeseer':
         # Citeseer
@@ -782,11 +909,10 @@ def main():
         for intra in intra_ratios:
             for edge_factor in total_edges_list:
                 total_edges = int(edge_factor * multi_factor)
-                data, metrics = perturb_disjoint(disjoint_graph, inter, intra, total_edges, i)
-                i += 1
+                data, metrics, intra_orbit_edges, inter_orbit_edges = perturb_disjoint(disjoint_graph, inter, intra, total_edges)
                 G = to_networkx(data, to_undirected=True)
                 # analyze_automorphisms(data, G)
-                run_training_pipeline(data, edge_factor*multi_factor, inter, intra, total_edges, args)
+                run_training_pipeline(data, intra_orbit_edges+inter_orbit_edges, inter, intra, total_edges, args)
 
 if __name__ == "__main__":
     main()

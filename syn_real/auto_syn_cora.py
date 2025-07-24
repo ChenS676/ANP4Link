@@ -565,7 +565,7 @@ def run_training_pipeline(data, metrics, par1, par2, par3, args):
         args.batch_size = 2**5
         args.lr = 0.00001
 
-    args.name_tag = args.data_name+ f"_ArScore_{metrics:.2f}_{args.gnn_model}_{args.score_model}_inter{par1:.2f}_intra{par2:.2f}_total{par3:.0f}"
+    args.name_tag = f"{args.data_name}_ArScore_{metrics:.2f}_{args.gnn_model}_{args.score_model}_inter{par1:.2f}_intra{par2:.2f}_total{par3:.0f}"
     
     # for batch_size, lr in itertools.product(hyperparams['batch_size'], hyperparams['lr']):
     #     args.batch_size = batch_size
@@ -640,12 +640,14 @@ def run_training_pipeline(data, metrics, par1, par2, par3, args):
     print(args.name_tag)
     mvari_str2csv(args.name_tag, save_dict, f'results/syn_{args.data_name}_{args.gnn_model}tuned.csv')
 
-def remove_random_edges(G: nx.Graph, num_edges: int, protected_edges: set):
+
+
+def remove_random_edges(G: nx.Graph, num_edges: int):
     """
     Randomly removes num_edges from G excluding those in protected_edges.
     """
     all_edges = set(G.edges)
-    removable_edges = list(all_edges - protected_edges)
+    removable_edges = list(all_edges)
 
     if len(removable_edges) < num_edges:
         raise ValueError("Not enough removable edges to delete.")
@@ -653,6 +655,8 @@ def remove_random_edges(G: nx.Graph, num_edges: int, protected_edges: set):
     to_remove = random.sample(removable_edges, num_edges)
     G.remove_edges_from(to_remove)
     return G
+
+
 
 def attach_star_graph(G_orig: nx.Graph, N: int, ig: int):
     G_combined = G_orig.copy()
@@ -737,7 +741,7 @@ def main():
 
     G = to_networkx(data, to_undirected=True)
     edge_dis = analyze_automorphisms(data, G)
-    run_training_pipeline(data, edge_dis, 0, 0, 0, args)
+    run_training_pipeline(data, edge_dis[0], 0, 0, 0, args)
 
     
     G_data = to_networkx(data)
@@ -755,7 +759,7 @@ def main():
         pyg_data = from_networkx(G_data)
         edge_dis = analyze_automorphisms(pyg_data, G_data)
         pyg_data.x = torch.ones((pyg_data.num_nodes, 1433))
-        run_training_pipeline(pyg_data, edge_dis, i, 0, 0, args)
+        run_training_pipeline(pyg_data, edge_dis[0], i, 0, 0, args)
 
 if __name__ == "__main__":
     main()
