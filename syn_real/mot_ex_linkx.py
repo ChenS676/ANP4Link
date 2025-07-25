@@ -462,7 +462,7 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--eval_steps', type=int, default=1)
-    parser.add_argument('--runs', type=int, default=1)
+    parser.add_argument('--runs', type=int, default=3)
     parser.add_argument('--kill_cnt',           dest='kill_cnt',      default=20,    type=int,       help='early stopping')
     parser.add_argument('--output_dir', type=str, default='output_test')
     parser.add_argument('--l2',		type=float,             default=0.0,			help='L2 Regularization for Optimizer')

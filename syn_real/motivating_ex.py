@@ -329,7 +329,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='homo')
     parser.add_argument('--data_name', type=str, default="Cora")
     parser.add_argument('--neg_mode', type=str, default='equal')
-    parser.add_argument('--gnn_model', type=str, default='ChebGCN', choices=['MixHopGCN', 'GCN', 'GIN', 'LINKX', 'ChebGCN'])
+    parser.add_argument('--gnn_model', type=str, default= 'GIN', choices=['MixHopGCN', 'GCN', 'GIN', 'LINKX', 'ChebGCN'])
     parser.add_argument('--score_model', type=str, default='mlp_score')
     parser.add_argument('--pt_path', default=f"plots/Citeseer/processed_graph_inter0.5_intra0.5_edges1000_auto0.7200_norm1_0.7676.pt",
                         type=str)
@@ -346,7 +346,7 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--eval_steps', type=int, default=1)
-    parser.add_argument('--runs', type=int, default=1)
+    parser.add_argument('--runs', type=int, default=3)
     parser.add_argument('--kill_cnt',           dest='kill_cnt',      default=20,    type=int,       help='early stopping')
     parser.add_argument('--output_dir', type=str, default='output_test')
     parser.add_argument('--l2',		type=float,             default=0.0,			help='L2 Regularization for Optimizer')
@@ -749,8 +749,8 @@ def main():
     original_data = load_real_world_graph(args.data_name)
     
     i = 0
-    perturb_disjoint(original_data, 0, 0, 0, i)
-    i += 1
+    # perturb_disjoint(original_data, 0, 0, 0, i)
+    # i += 1
     
     disjoint_graph = create_disjoint_graph(original_data)
     disjoint_graph, metrics = perturb_disjoint(disjoint_graph, 0, 0, 0, i)
@@ -785,7 +785,7 @@ def main():
                 data, metrics = perturb_disjoint(disjoint_graph, inter, intra, total_edges, i)
                 i += 1
                 G = to_networkx(data, to_undirected=True)
-                # analyze_automorphisms(data, G)
+                analyze_automorphisms(data, G)
                 run_training_pipeline(data, edge_factor*multi_factor, inter, intra, total_edges, args)
 
 if __name__ == "__main__":

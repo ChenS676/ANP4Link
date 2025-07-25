@@ -194,7 +194,6 @@ def count_automorphic_edges(G, node_groups):
     print(f"Number of unique-orbit nodes: {len(unique_group_nodes)}")
 
     # Iterate over all possible node pairs
-    edge_counter = 0
     for u, v in itertools.product(G.nodes(), G.nodes()):
         if u in unique_group_nodes and v in unique_group_nodes:
             non_automorphic_edges.append((u, v))
@@ -206,7 +205,6 @@ def count_automorphic_edges(G, node_groups):
             intra_orbit_edge_count += 1
         else:
             inter_orbit_edge_count += 1
-        edge_counter += 1
     
     # Final counts
     num_automorphic_edges = intra_orbit_edge_count + inter_orbit_edge_count
@@ -214,7 +212,9 @@ def count_automorphic_edges(G, node_groups):
 
     # print(f"Intra-orbit edges: {intra_orbit_edge_count}, Inter-orbit edges: {inter_orbit_edge_count}")
     # print(f"Automorphic edges: {inter_orbit_edge_count/edge_counter:.2%} of total edges")
-    print(f"Distinguishable edges: {(num_non_automorphic_edges/edge_counter)}")
+    print(f"Distinguishable edges: {(num_non_automorphic_edges/G.number_of_nodes()**2)}")
+    print(f"non-automorphic edges: {num_non_automorphic_edges}")
+    print(f"automorphic edges: {len(automorphic_edges)}")
     return num_automorphic_edges, num_non_automorphic_edges, non_automorphic_edges, automorphic_edges, auto_nodes, unique_group_nodes
 
 

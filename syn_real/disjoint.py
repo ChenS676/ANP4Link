@@ -401,7 +401,6 @@ for i in range(1, 100, 10):
     G_data = remove_random_edges(G_data, num_edges=N - 1, protected_edges=star_edges)
     pyg_data = from_networkx(G_data)
     analyze_automorphisms(pyg_data, G_data)
-    run_training_pipeline(data, 0, inter, intra, total_edges, args)
 
 
 
