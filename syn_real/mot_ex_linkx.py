@@ -889,7 +889,7 @@ def main():
         inter_ratios = [0.1]   
         intra_ratios =  [0.5]
         total_edges_list =  [0.2, 1, 4, 7, 12, 18, 20, 28] #  
-        multi_factor = 100 # 250
+        multi_factor = 10 # 250
 
     elif args.data_name == 'Citeseer':
         # Citeseer
