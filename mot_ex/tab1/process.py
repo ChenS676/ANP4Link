@@ -3,15 +3,15 @@ import numpy as np
 
 # Raw GIN result string
 raw_data_gin = """
-# # MixHop
-# Cora_Non_Edge_40.00_ArScore_NoneMixHopGCN_mlp_score_inter0.10_intra0.50_total40_,17.43 ± 7.03,58.61 ± 10.20,99.58 ± 0.10,99.59 ± 0.10
-# Cora_Non_Edge_200.00_ArScore_NoneMixHopGCN_mlp_score_inter0.10_intra0.50_total200_,36.46 ± 14.90,60.24 ± 5.56,99.11 ± 0.17,99.23 ± 0.03
-# Cora_Non_Edge_800.00_ArScore_NoneMixHopGCN_mlp_score_inter0.10_intra0.50_total800_,36.79 ± 23.05,40.19 ± 10.79,98.06 ± 0.31,98.18 ± 0.20
-# Cora_Non_Edge_1400.00_ArScore_NoneMixHopGCN_mlp_score_inter0.10_intra0.50_total1400_,51.22 ± 19.80,59.75 ± 17.16,97.03 ± 0.27,97.71 ± 0.20
-# Cora_Non_Edge_2400.00_ArScore_NoneMixHopGCN_mlp_score_inter0.10_intra0.50_total2400_,0.00 ± 0.00,0.12 ± 0.00,50.00 ± 0.00,50.00 ± 0.00
-# Cora_Non_Edge_3600.00_ArScore_NoneMixHopGCN_mlp_score_inter0.10_intra0.50_total3600_,0.00 ± 0.00,0.12 ± 0.00,50.00 ± 0.00,50.00 ± 0.00
-# Cora_Non_Edge_4000.00_ArScore_NoneMixHopGCN_mlp_score_inter0.10_intra0.50_total2400_,0.00 ± 0.00,0.12 ± 0.00,50.00 ± 0.00,50.00 ± 0.00
-# Cora_Non_Edge_5000.00_ArScore_NoneMixHopGCN_mlp_score_inter0.10_intra0.50_total3600_,0.00 ± 0.00,0.12 ± 0.00,50.00 ± 0.00,50.00 ± 0.00
+Cora_Non_Edge_40.00_ArScore_NoneGAT_mlp_score_inter0.10_intra0.50_total40_,7.81 ± 3.57,33.65 ± 3.90,99.38 ± 0.15,99.22 ± 0.17
+Cora_Non_Edge_200.00_ArScore_NoneGAT_mlp_score_inter0.10_intra0.50_total200_,13.64 ± 9.83,30.05 ± 4.03,99.05 ± 0.07,98.86 ± 0.10
+Cora_Non_Edge_800.00_ArScore_NoneGAT_mlp_score_inter0.10_intra0.50_total800_,10.52 ± 8.25,23.15 ± 8.39,97.88 ± 0.17,97.52 ± 0.33
+Cora_Non_Edge_1400.00_ArScore_NoneGAT_mlp_score_inter0.10_intra0.50_total1400_,15.51 ± 5.88,30.47 ± 2.12,97.48 ± 0.22,97.57 ± 0.21
+Cora_Non_Edge_2400.00_ArScore_NoneGAT_mlp_score_inter0.10_intra0.50_total2400_,11.65 ± 1.47,18.91 ± 1.15,95.85 ± 0.21,95.85 ± 0.18
+Cora_Non_Edge_3600.00_ArScore_NoneGAT_mlp_score_inter0.10_intra0.50_total3600_,14.41 ± 7.89,22.70 ± 5.51,95.43 ± 0.24,95.40 ± 0.08
+Cora_Non_Edge_4000.00_ArScore_NoneGAT_mlp_score_inter0.10_intra0.50_total4000_,12.32 ± 3.64,23.35 ± 3.56,95.24 ± 0.49,95.35 ± 0.47
+Cora_Non_Edge_5600.00_ArScore_NoneGAT_mlp_score_inter0.10_intra0.50_total5600_,10.72 ± 5.89,15.40 ± 4.91,92.89 ± 0.17,92.38 ± 0.59
+
 """
 
 # Define metric names and reversed x-axis (0.0 to 1.0 for plotting)

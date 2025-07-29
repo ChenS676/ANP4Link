@@ -407,7 +407,7 @@ for i in range(1, 100, 10):
 def power_law_normalization(values, gamma=0.2964):
     min_val = min(values)
     max_val = max(values)
-    return [((x - min_val) / (max_val - min_val)) ** gamma for x in values]
+    return [1 - ((x - min_val) / (max_val - min_val)) ** gamma for x in values]
 
 # Example usage:
 x = [
@@ -425,3 +425,4 @@ x = [
 
 normalized_x = power_law_normalization(x)
 print(normalized_x)
+

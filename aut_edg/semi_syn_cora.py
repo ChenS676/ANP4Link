@@ -58,7 +58,7 @@ def build_graph(dataset_name="Cora",
     data = dataset[0]
 
     # Extract k-hop subgraph
-    subset, sub_edge_index, mapping, edge_mask = k_hop_subgraph(
+    subset, sub_edge_index, _, _ = k_hop_subgraph(
         node_idx=node_idx,
         num_hops=num_hops,
         edge_index=data.edge_index,
@@ -76,10 +76,9 @@ def build_graph(dataset_name="Cora",
     for n in subG_data.nodes():
         subG_data.nodes[n]['x'] = [1.0]
     if analyze:
-        num_auto_edges, num_non_auto_edges, non_auto_edges, auto_edges = analyze_automorphisms(sub_data, subG_data) # classify edges to be automorphic or not
+        _, _, _, auto_edges, auto_nodes, _ = analyze_automorphisms(sub_data, subG_data) # classify edges to be automorphic or not
 
     if visualize:
-        
         plt.figure(figsize=(8, 6))
         nx.draw(subG_data, with_labels=True, node_size=300, 
                 node_color='skyblue', edge_color='gray')
@@ -88,7 +87,7 @@ def build_graph(dataset_name="Cora",
         plt.show()
     print("Num nodes:", data.num_nodes)
     print("Num edges:", data.edge_index.size(1))
-    return sub_data, auto_edges, subG_data
+    return sub_data, auto_edges, subG_data, auto_nodes
 
 
 # %% GCN model
@@ -112,7 +111,7 @@ class LinkPredictor(torch.nn.Module):
 
 # %% Training and visualization
 def run():
-    data, auto_edges, G_nx = build_graph()
+    data, auto_edges, G_nx, auto_nodes = build_graph()
     edge_index = data.edge_index
     data.x = torch.tensor([d['x'] for _, d in G_nx.nodes(data=True)], dtype=torch.float)
 
@@ -138,25 +137,60 @@ def run():
     x = model(data.x, edge_index).detach()
 
     #%% t-SNE embedding
-    tsne = TSNE(n_components=2, perplexity=2,random_state=0)
-    x_2d = tsne.fit_transform(x.numpy())
+    # tsne = TSNE(n_components=2, perplexity=2,random_state=0)
+    # x_2d = tsne.fit_transform(x.numpy())
 
-    # Plot node embeddings
-    plt.figure(figsize=(8,6))
-    for i, (x_, y_) in enumerate(x_2d):
-        color = 'red' if i in [0,1,2,3] else 'blue'
-        plt.scatter(x_, y_, c=color)
-        plt.text(x_ + 0.02, y_ + 0.02, str(i), fontsize=9)
-    plt.title("2D Visualization of Node Embeddings")
-    plt.savefig('result.pdf')
+    # # Plot node embeddings
+    # plt.figure(figsize=(8,6))
+    # for i, (x_, y_) in enumerate(x_2d):
+    #     color = 'red' if i in [0,1,2,3] else 'blue'
+    #     plt.scatter(x_, y_, c=color)
+    #     plt.text(x_ + 0.02, y_ + 0.02, str(i), fontsize=9)
+    # plt.title("2D Visualization of Node Embeddings")
+    # plt.savefig('result.pdf')
 
     #%% Plot original graph
+    # pos = nx.spring_layout(G_nx, seed=42)
+    # node_colors = ['red' if n in auto_nodes else 'skyblue' for n in G_nx.nodes()]
+    # plt.figure(figsize=(6,6))
+    # nx.draw(G_nx, pos, with_labels=False, node_color=node_colors, node_size=60)
+    # plt.title("Original Graph (Red = Automorphic Nodes)")
+    # plt.savefig('graph.pdf')
+
+
+    import matplotlib.pyplot as plt
+    import networkx as nx
+
+    # Layout
     pos = nx.spring_layout(G_nx, seed=42)
-    node_colors = ['red' if n in [0,1,2,3] else 'skyblue' for n in G_nx.nodes()]
-    plt.figure(figsize=(6,6))
-    nx.draw(G_nx, pos, with_labels=True, node_color=node_colors, node_size=600)
-    plt.title("Original Graph (Red = Automorphic Nodes)")
-    plt.savefig('result.pdf')
+
+    # Node colors
+    node_colors = ['red' if n in auto_nodes else 'skyblue' for n in G_nx.nodes()]
+
+    # Plot
+    plt.figure(figsize=(8, 8))
+    nodes = nx.draw_networkx_nodes(
+        G_nx, pos, node_color=node_colors, node_size=150, edgecolors='black'
+    )
+    nx.draw_networkx_edges(G_nx, pos, alpha=0.5, width=0.8)
+
+    # Optional: draw labels if needed
+    # nx.draw_networkx_labels(G_nx, pos, font_size=8, font_color='black')
+
+    # Custom legend
+    from matplotlib.patches import Patch
+    legend_elements = [
+        Patch(facecolor='red', edgecolor='black', label='Automorphic Nodes'),
+        Patch(facecolor='skyblue', edgecolor='black', label='Other Nodes')
+    ]
+    plt.legend(handles=legend_elements, loc='best')
+
+    # Title and layout
+    plt.title("Original Graph\nRed = Automorphic Nodes", fontsize=14)
+    plt.axis('off')
+    plt.tight_layout()
+    plt.savefig('graph.pdf', dpi=300)
+    plt.show()
 
     # %% Edge prediction scores
     preds, types = [], []
@@ -173,5 +207,5 @@ def run():
     plt.suptitle("")
     plt.ylabel("Score")
     plt.savefig('result.pdf')
-
+    
 run()

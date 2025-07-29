@@ -329,12 +329,12 @@ def parse_args():
     parser = argparse.ArgumentParser(description='homo')
     parser.add_argument('--data_name', type=str, default="Cora")
     parser.add_argument('--neg_mode', type=str, default='equal')
-    parser.add_argument('--gnn_model', type=str, default= 'ChebGCN', choices=['MixHopGCN', 'GCN', 'GIN', 'LINKX', 'ChebGCN'])
+    parser.add_argument('--gnn_model', type=str, default= 'GAT', choices=['MixHopGCN', 'GCN', 'GIN', 'LINKX', 'ChebGCN'])
     parser.add_argument('--score_model', type=str, default='mlp_score')
     parser.add_argument('--pt_path', default=f"plots/Citeseer/processed_graph_inter0.5_intra0.5_edges1000_auto0.7200_norm1_0.7676.pt",
                         type=str)
     ##gnn setting
-    parser.add_argument('--num_layers', type=int, default=3)
+    parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--num_layers_predictor', type=int, default=3)
     parser.add_argument('--hidden_channels', type=int, default=32)
     parser.add_argument('--gnnout_hidden_channels', type=int, default=512)
@@ -762,7 +762,7 @@ def main():
         inter_ratios = [0.1]   
         intra_ratios =  [0.5]
         total_edges_list =  [0.2, 1, 4, 7, 12, 18, 20, 28] #  
-        multi_factor = 10
+        multi_factor = 200
 
     elif args.data_name == 'Citeseer':
         # Citeseer
