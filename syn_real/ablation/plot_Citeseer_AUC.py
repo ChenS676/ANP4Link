@@ -82,25 +82,25 @@ raw_citeseer_auc_data = [
     # [0.08,  0.14,  0.16,  0.24,  0.33,  0.22,  0.47,  0.56,  0.74, 1.42, 1.49]),
 
     ('Proposed w.o. D1',
-     [0.9, 0.82, 0.72, 0.62, 0.52, 0.43, 0.35, 0.23, 0.19, 0.12, 0.06],
-     [99.89, 99.83, 99.77, 99.76, 99.76, 99.74, 99.67, 99.63, 99.625, 99.6225, 99.62],
-     [0.08, 0.1, 0.11, 0.07, 0.05, 0.07, 0.12, 0.07, 0.145, 0.1825, 0.22]),
+     [0.125, 0.25,  0.375, 0.5,   0.625, 0.75,  0.875, 1.0],
+     [99.76, 99.76, 99.74, 99.67, 99.63, 99.625, 99.6225, 99.62],
+     [0.07, 0.05,   0.07, 0.12,    0.07, 0.145, 0.1825, 0.22]),
 
     ('Proposed w.o D2',
-     [0.9, 0.82, 0.72, 0.62, 0.52, 0.43, 0.35, 0.23, 0.19, 0.12, 0.06],
-     [99.9, 99.8, 99.79, 99.78, 99.75, 99.74, 99.73, 99.71, 99.7775, 99.83875, 99.73],
-     [0.05, 0.05, 0.07, 0.12, 0.03, 0.07, 0.04, 0.03, 0.04, 0.045, 0.05]),
+     [0.125, 0.25,  0.375, 0.5,   0.625, 0.75,    0.875, 1.0],
+     [99.78, 99.75, 99.74, 99.73, 99.71, 99.7775, 99.75, 99.73],
+     [0.12,  0.03,   0.07, 0.04,   0.03, 0.04,    0.045, 0.05]),
 
     ('Proposed',
-     [0.9, 0.82, 0.72, 0.62, 0.52, 0.43, 0.35, 0.23, 0.19, 0.12, 0.06],
-     [99.94, 99.86, 99.83, 99.81, 99.8, 99.78, 99.76, 99.74, 99.735, 99.7325, 99.9],
-     [0.03, 0.03, 0.07, 0.0, 0.05, 0.04, 0.03, 0.07, 0.075, 0.0775, 0.08])
+     [0.125, 0.25,  0.375,  0.5,   0.625, 0.75,    0.875, 1.0],
+     [99.81, 99.8,   99.78, 99.76, 99.74, 99.735, 99.7325, 99.73],
+     [ 0.0,  0.05,   0.04,   0.03, 0.07, 0.075, 0.0775, 0.08])
     
 ]
 
 
 # Define new interpolated alpha values
-new_alpha = np.arange(0.1, 1.0, 0.2)
+
 
 # Create a new dictionary to store interpolated results
 interpolated_data = defaultdict(dict)
@@ -111,7 +111,7 @@ for model, alpha, best_valid, variance in raw_citeseer_auc_data:
     # f_best_valid = interp1d(alpha, best_valid, kind='linear', fill_value="extrapolate")
     # f_variance = interp1d(alpha, variance, kind='linear', fill_value="extrapolate")
 
-    interpolated_data[model]["alpha"] =  [1-i for i in alpha] 
+    interpolated_data[model]["alpha"] =  alpha
     interpolated_data[model]["best_valid"] = best_valid
     interpolated_data[model]["variance"] = variance
 
@@ -167,29 +167,39 @@ fontsize = 22
 # ax.legend(fontsize=LEGENG_SIZE, loc="lower left")
 # plt.tight_layout()
 # Formatting the plot
-legend = ax.legend(
-    fontsize=LEGEND_SIZE,
-    loc="upper right",            # <<< 改成 "upper right"
-    bbox_to_anchor=(0.95, 0.95),   # <<< (0,0) 左下角，(1,1) 右上角，这里留一点边
-    ncol=1,                        # <<< 改成一列
-    frameon=True,
-    framealpha=0.5,
-    fancybox=True
-)
+# legend = ax.legend(
+#     fontsize=LEGEND_SIZE,
+#     loc="upper right",            # <<< 改成 "upper right"
+#     bbox_to_anchor=(0.95, 0.95),   # <<< (0,0) 左下角，(1,1) 右上角，这里留一点边
+#     ncol=1,                        # <<< 改成一列
+#     frameon=True,
+#     framealpha=0.5,
+#     fancybox=True
+# )
 
-legend.get_frame().set_facecolor('white')
-ax.set_xlabel(r"$\alpha_{\mathcal{V}}$", fontsize=LABEL_SIZE)
+# legend.get_frame().set_facecolor('white')
+ax.set_xlabel(r"$EAR$", fontsize=LABEL_SIZE)
 ax.set_ylabel("AUC (/%)", fontsize=LABEL_SIZE)
-ax.set_xticks(new_alpha)
 ymin = 99.6
 ymax = 100
 yticks = np.linspace(ymin, ymax, 5)
 ax.set_yticks(yticks)
 ax.set_yticklabels([f"{tick:.2f}" for tick in yticks])  # 保留两位小数
 
-ax.set_ylim(ymin, ymax)  # 🔥🔥🔥 这里设置只显示 99.62-100
+
+xtick_positions = sorted(set(alpha))
+xtick_labels = [f"{x:.2f}" if x in [0.0, 0.25, 0.50, 0.75, 1.0] else "" for x in xtick_positions]
+
+ax.set_xlabel(r"$EAR$", fontsize=LABEL_SIZE)
+ax.set_ylabel("AUC (/%)", fontsize=LABEL_SIZE)
+ax.set_xticks(xtick_positions)
+ax.set_xticklabels(xtick_labels, fontsize=20)
+
+
+
+ax.set_ylim(ymin, ymax) 
 ax.tick_params(axis='both', labelsize=TICK_SIZE)
 # ax.legend(fontsize=LEGENG_SIZE, loc="lower left")
 plt.tight_layout()
 
-plt.savefig('ablation_Exp1_Citeseer_SYN_AUC_Real.pdf')
+plt.savefig('ablation_Exp1_Citeseer_SYN_AUC_Real_wl.pdf')

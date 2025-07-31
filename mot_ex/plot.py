@@ -156,7 +156,7 @@ for _, row in df_real.iterrows():
 # 图形设置
 plt.xscale("log")
 plt.xlabel("Number of Nodes (log scale)", fontsize=LABEL_SIZE)
-plt.ylabel(r"Automorphism Ratio $\alpha_{\mathcal{V}}$", fontsize=LABEL_SIZE)
+plt.ylabel(r"Automorphism Ratio $EAR_{\mathcal{V}}$", fontsize=LABEL_SIZE)
 plt.title("Automorphism Spectrum of Graphs", fontsize=TITLE_SIZE)
 plt.xticks(fontsize=TICK_SIZE)
 plt.yticks(fontsize=TICK_SIZE)

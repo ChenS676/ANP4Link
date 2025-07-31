@@ -4,7 +4,7 @@ import seaborn as sns
 from collections import defaultdict
 
 # === Define full raw_data with α = 0.6 ===
-raw_data = [
+raw_data_mrr = [
     
     ("GCN", [0.125, 0.25,  0.375, 0.5,   0.625, 0.75, 0.875, 1.0],
             [5.33, 8.06, 8.97, 9.1, 13.81, 8.79, 12.07, 16.62],
@@ -36,21 +36,31 @@ for model, alpha, best_valid, variance in raw_data:
     plot_data[model]["variance"] = variance
 
 baselines = ["GCN", "GAT", "GIN", "GraphSAGE", "MixHopGCN", "ChebGCN", "LINKX"]
-proposed = ["Proposed w.o. D1", "Proposed w.o D2", "Proposed"]
+# proposed = ["Proposed w.o. D1", "Proposed w.o D2", "Proposed"]
 
-def is_yellow(rgb): return rgb[0] > 0.9 and rgb[1] > 0.9 and rgb[2] < 0.6
-palette = sns.color_palette("Set2", len(baselines))
-baseline_colors = [c for c in palette if not is_yellow(c)][:len(baselines)]
-model_colors = {m: c for m, c in zip(baselines, baseline_colors)}
-proposed_colors = [(0.1, 0.3, 0.6), (0.2, 0.5, 0.2), (0.6, 0.1, 0.2)]
-model_colors.update({m: c for m, c in zip(proposed, proposed_colors)})
+# def is_yellow(rgb): return rgb[0] > 0.9 and rgb[1] > 0.9 and rgb[2] < 0.6
+# palette = sns.color_palette("Set2", len(baselines))
+# baseline_colors = [c for c in palette if not is_yellow(c)][:len(baselines)]
+# model_colors = {m: c for m, c in zip(baselines, baseline_colors)}
+# proposed_colors = [(0.1, 0.3, 0.6), (0.2, 0.5, 0.2), (0.6, 0.1, 0.2)]
+# model_colors.update({m: c for m, c in zip(proposed, proposed_colors)})
+
 
 dashed_models = {"ChebGCN", "LINKX"}
 line_styles = {m: "--" if m in dashed_models else "-" for m in plot_data}
 
 fig, ax = plt.subplots(figsize=(10, 8))
 
+model_colors = {'GCN': (0.4, 0.7607843137254902, 0.6470588235294118), 
+                'GAT': (0.9882352941176471, 0.5529411764705883, 0.3843137254901961), 
+                'GIN': (0.5529411764705883, 0.6274509803921569, 0.796078431372549), 
+                'GraphSAGE': (0.9058823529411765, 0.5411764705882353, 0.7647058823529411), 
+                'MixHopGCN': (0.6509803921568628, 0.8470588235294118, 0.32941176470588235), 
+                'ChebGCN': (1.0, 0.8509803921568627, 0.1843137254901961), 
+                'LINKX': (0.8980392156862745, 0.7686274509803922, 0.5803921568627451)}
+
 for idx, (model, values) in enumerate(plot_data.items()):
+
     color = model_colors.get(model, f"C{idx}")
     if model == 'LINKX':
         color = 'red'
@@ -77,13 +87,19 @@ for idx, (model, values) in enumerate(plot_data.items()):
     )
 
 fontsize = 40
-ax.set_xlabel(r"$\alpha$", fontsize=fontsize)
+ax.set_xlabel(r"$EAR$", fontsize=fontsize)
 ax.set_ylabel("MRR (/%)", fontsize=fontsize)
 ax.set_xticks(sorted(set(alphas)))
+xtick_positions = sorted(set(alphas))
+xtick_labels = [f"{x:.2f}" if x in [0.0, 0.25, 0.50, 0.75] else "" for x in xtick_positions]
+
+ax.set_xticks(xtick_positions)
+ax.set_xticklabels(xtick_labels, fontsize=40)
+
 ax.set_yticks(np.arange(0, 55, 15))
-ax.set_ylim(0, 50)  # <-- This line limits the y-axis range
-ax.tick_params(axis='x', labelsize=25)  # 横轴刻度字体大小
-ax.tick_params(axis='y', labelsize=30)  # 纵轴刻度字体大小
+ax.set_ylim(0, 55)  # <-- This line limits the y-axis range
+
+ax.tick_params(axis='y', labelsize=fontsize )  # 纵轴刻度字体大小
 
 ax.legend(fontsize=30, loc="upper right", frameon=False, ncol=1)  # Set legend in top-right, no frame, large font
 

@@ -232,7 +232,7 @@ for idx, (model, values) in enumerate(plot_data.items()):
     )
 
 fontsize = 16
-ax.set_xlabel(r"$\alpha$", fontsize=fontsize)
+ax.set_xlabel(r"$EAR$", fontsize=fontsize)
 ax.set_ylabel("AUC (/%)", fontsize=fontsize)
 ax.set_xticks(sorted(set(alphas)))
 ax.set_yticks(np.arange(0, 110, 10))

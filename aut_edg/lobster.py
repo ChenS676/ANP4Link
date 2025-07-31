@@ -108,44 +108,203 @@ def run(N):
     x_2d = tsne.fit_transform(x.numpy())
 
     # Plot node embeddings
-    plt.figure(figsize=(8,6))
-    for i, (x_, y_) in enumerate(x_2d):
-        color = 'red' if i in [0,1,2,3] else 'blue'
-        plt.scatter(x_, y_, c=color)
-        plt.text(x_ + 0.02, y_ + 0.02, str(i), fontsize=9)
-    plt.title("2D Visualization of Node Embeddings")
-    plt.savefig('result.pdf')
+    # plt.figure(figsize=(8,6))
+    # for i, (x_, y_) in enumerate(x_2d):
+    #     color = 'red' if i in [0,1,2,3] else 'blue'
+    #     plt.scatter(x_, y_, c=color)
+    #     plt.text(x_ + 0.02, y_ + 0.02, str(i), fontsize=9)
+    # plt.title("2D Visualization of Node Embeddings")
+    # plt.savefig('result.pdf')
 
 
+    # pos = nx.spring_layout(G_nx, seed=42)
+    # node_colors = ['red' if n in [0,1,2,3] else 'skyblue' for n in G_nx.nodes()]
+    # plt.figure(figsize=(6,6))
+    # nx.draw(G_nx, pos, with_labels=True, node_color=node_colors, node_size=600)
+    # plt.title("Original Graph (Red = Automorphic Nodes)")
+    # plt.savefig('graph.pdf')
+
+
+    # preds, types = [], []
+    # for i in range(all_edge_index.shape[1]):
+    #     s, d = int(all_edge_index[0, i]), int(all_edge_index[1, i])
+    #     pred = predictor(x[s].unsqueeze(0), x[d].unsqueeze(0)).item()
+    #     t = 'A' if (s,d) in auto_edges or (d,s) in auto_edges else 'NA'
+    #     preds.append(pred)
+    #     types.append(t)
+
+    # df = pd.DataFrame({"Prediction": preds, "EdgeType": types})
+    # df.boxplot(column="Prediction", by="EdgeType")
+    # plt.title("Link Prediction Score by Edge Type")
+    # plt.suptitle("")
+    # plt.ylabel("Score")
+    # plt.savefig('result.pdf')
+
+    import matplotlib.pyplot as plt
+    import networkx as nx
+    import pandas as pd
+
+    # ---------- 1. 2D Visualization of Node Embeddings ----------
+    # plt.figure(figsize=(8, 6))
+    # for i, (x_, y_) in enumerate(x_2d):
+    #     color = 'red' if i in [0, 1, 2, 3] else 'blue'
+    #     plt.scatter(x_, y_, c=color, s=40, edgecolor='k', linewidth=0.5)
+    #     plt.text(x_ + 0.03, y_ + 0.03, str(i), fontsize=9)
+
+    # plt.title("2D Visualization of Node Embeddings", fontsize=14)
+    # plt.xlabel("Embedding Dimension 1")
+    # plt.ylabel("Embedding Dimension 2")
+    # plt.grid(True, linestyle='--', alpha=0.3)
+    # plt.tight_layout()
+    # plt.savefig("embedding_plot.pdf")
+    # plt.close()
+
+    # ---------- 2. Visualization of the Original Graph ----------
+    # pos = nx.spring_layout(G_nx, seed=42)
+    # node_colors = ['red' if n in auto_nodes else 'skyblue' for n in G_nx.nodes()]
+
+    # plt.figure(figsize=(6, 6))
+    # nx.draw(
+    #     G_nx, pos, with_labels=True, node_color=node_colors,
+    #     node_size=700, font_size=10, edge_color='gray'
+    # )
+    # plt.title("Original Graph\n(Red = Automorphic Nodes)", fontsize=14)
+    # plt.tight_layout()
+    # plt.savefig(f"graph_visual{N}.pdf")
+    # plt.close()
+    
+        
+    import matplotlib.pyplot as plt
+    import networkx as nx
+
+    # Layout and colors
     pos = nx.spring_layout(G_nx, seed=42)
-    node_colors = ['red' if n in [0,1,2,3] else 'skyblue' for n in G_nx.nodes()]
-    plt.figure(figsize=(6,6))
-    nx.draw(G_nx, pos, with_labels=True, node_color=node_colors, node_size=600)
-    plt.title("Original Graph (Red = Automorphic Nodes)")
-    plt.savefig('result.pdf')
+    node_colors = ["#1BA462" if n in auto_nodes else "#1D7BBE" for n in G_nx.nodes()]  # Colorblind-safe red/blue
+
+    # Plot settings
+    plt.figure(figsize=(4, 4))  # Small but high-quality figure
+    nx.draw_networkx(
+        G_nx,
+        pos=pos,
+        with_labels=False,
+        node_color=node_colors,
+        node_size=50,
+        font_size=8,
+        font_weight='bold',
+        edge_color='black',
+        linewidths=0.8
+    )
+
+    # Title and legend
+    plt.title("Graph Visualization", fontsize=12)
+    red_patch = plt.Line2D([0], [0], marker='o', color='w', label='Automorphic Nodes',
+                        markerfacecolor='#d62728', markersize=8)
+    blue_patch = plt.Line2D([0], [0], marker='o', color='w', label='Other Nodes',
+                            markerfacecolor='#1f77b4', markersize=8)
+    plt.legend(handles=[red_patch, blue_patch], loc='lower left', fontsize=8, frameon=False)
+
+    # Clean layout
+    plt.axis('off')
+    plt.tight_layout()
+
+    # Save in vector format
+    plt.savefig(f"graph_visual{N}.pdf", bbox_inches='tight')
+    plt.close()
 
 
+    # import matplotlib.pyplot as plt
+    # import networkx as nx
+    # from matplotlib.patches import Patch
+
+    # Layout
+    # pos = nx.spring_layout(G_nx, seed=42)
+
+    # # Colorblind-friendly node colors
+    # color_auto = "#71d675"     # Strong red
+    # color_other = "#c465cd"    # Blue
+
+    # node_colors = [color_auto if n in auto_nodes else color_other for n in G_nx.nodes()]
+
+    # # Plot
+    # plt.figure(figsize=(3.5, 3.5))  # For NeurIPS 2-column fit
+
+    # Draw nodes and edges
+    # nx.draw_networkx_nodes(
+    #     G_nx, pos, node_color=node_colors, node_size=200,
+    #     edgecolors='black', linewidths=0.5
+    # )
+    # nx.draw_networkx_edges(
+    #     G_nx, pos, alpha=0.9, width=0.9, edge_color='gray'
+    # )
+
+    # Optional labels
+    # nx.draw_networkx_labels(G_nx, pos, font_size=6)
+
+    # Legend
+    # legend_elements = [
+    #     Patch(facecolor=color_auto, edgecolor='black', label='Automorphic Node'),
+    #     Patch(facecolor=color_other, edgecolor='black', label='Other Node')
+    # ]
+    # plt.legend(
+    #     handles=legend_elements,
+    #     loc='upper left',
+    #     fontsize=15,
+    #     frameon=False
+    # )
+
+    # # Title and layout
+    # # plt.title("Graph Structure", fontsize=10)
+    # plt.axis('off')
+    # plt.tight_layout()
+
+    # # Save as vector graphic
+    # plt.savefig(f'graph_visual_{N}.pdf', dpi=300, bbox_inches='tight')
+    # plt.close()
+
+    # ---------- 3. Link Prediction Box Plot ----------
     preds, types = [], []
     for i in range(all_edge_index.shape[1]):
         s, d = int(all_edge_index[0, i]), int(all_edge_index[1, i])
         pred = predictor(x[s].unsqueeze(0), x[d].unsqueeze(0)).item()
-        t = 'A' if (s,d) in auto_edges or (d,s) in auto_edges else 'NA'
+        t = 'A' if (s, d) in auto_edges or (d, s) in auto_edges else 'NA'
         preds.append(pred)
         types.append(t)
 
+    import pandas as pd
+    import matplotlib.pyplot as plt
+
+    # 构造 DataFrame
     df = pd.DataFrame({"Prediction": preds, "EdgeType": types})
+
+    # 创建正方形画布
+    plt.figure(figsize=(6, 6))
+
+    # 画箱线图
     df.boxplot(column="Prediction", by="EdgeType")
-    plt.title("Link Prediction Score by Edge Type")
-    plt.suptitle("")
-    plt.ylabel("Score")
-    plt.savefig('result.pdf')
 
+    # 标题和轴标签
+    plt.title("", fontsize=20)
+    plt.suptitle("")  # 移除默认副标题
+    plt.xlabel("")
+    plt.ylabel("Prediction Score", fontsize=20)
 
+    # 坐标轴字体大小
+    plt.tick_params(axis='both', which='major', labelsize=20)
 
-run(20)
+    # 自动调整布局并保存
+    plt.tight_layout()
 
+    return plt
+    
+for i in range(1, 10):
+    plt = run(10)
+    
+    plt.savefig(f"link_prediction_boxplot_{i}.pdf", dpi=200)
+    plt.close()
+    
 
-run(40)
+# run(20)
 
+# run(40)
 
-run(60)
+# run(60)

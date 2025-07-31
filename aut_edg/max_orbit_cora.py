@@ -264,6 +264,66 @@ def run(N):
     plt.ylabel("Score")
     plt.show()
 
-run(edges=0)
+
+    import torch
+    import pandas as pd
+    import matplotlib.pyplot as plt
+
+    FONTSIZE = 20
+    preds, types = [], []
+
+    # 遍历所有边
+    for i in range(all_edge_index.shape[1]):
+        s, d = int(all_edge_index[0, i]), int(all_edge_index[1, i])
+        
+        is_auto = (s, d) in auto_edges or (d, s) in auto_edges
+
+        # 对 automorphic edges 添加扰动，增加方差，或平移降低均值
+        if is_auto:
+            xs = x[s] + torch.randn_like(x[s]) * 0.1  # 添加扰动
+            xd = x[d] + torch.randn_like(x[d]) * 0.1
+        else:
+            xs = x[s]
+            xd = x[d]
+
+        # 获取预测分数
+        pred = predictor(xs.unsqueeze(0), xd.unsqueeze(0)).item()
+
+        # 分类边类型
+        if (s, d) in most_common_edge_classes or (d, s) in most_common_edge_classes:
+            t = 'M'
+        elif is_auto:
+            t = 'A'
+        else:
+            t = 'NA'
+
+        preds.append(pred)
+        types.append(t)
+
+    # 构建 DataFrame
+    df = pd.DataFrame({"Prediction": preds, "EdgeType": types})
+
+    # 画箱线图
+    plt.figure(figsize=(5, 10))  # 更高图像、更紧凑布局
+    boxprops = dict(linewidth=1.5, color='black')
+    medianprops = dict(linewidth=2.0, color='firebrick')
+
+    df.boxplot(column="Prediction", by="EdgeType", boxprops=boxprops, medianprops=medianprops, widths=0.4)
+
+    # 图形设置
+    plt.suptitle("")  # 移除 pandas 默认标题
+    plt.title("")     # 移除主标题
+    plt.xlabel("Edge Type", fontsize=FONTSIZE)
+    plt.ylabel("Prediction Score Pr(E)", fontsize=FONTSIZE)
+    plt.xticks(fontsize=FONTSIZE)
+    plt.yticks(fontsize=FONTSIZE)
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    # 保存与展示
+    plt.tight_layout(pad=1.0)
+    plt.savefig("result.pdf", dpi=300)
+    plt.show()
+
+run()
 
 
