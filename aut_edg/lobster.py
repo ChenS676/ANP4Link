@@ -208,7 +208,7 @@ def run(N):
     plt.tight_layout()
 
     # Save in vector format
-    plt.savefig(f"graph_visual{N}.pdf", bbox_inches='tight')
+    plt.savefig(f"/pfs/work9/workspace/scratch/ka_cc7738-orbit-gnn/ANP4Link/aut_edg/graph_visual{N}.pdf", bbox_inches='tight')
     plt.close()
 
 
@@ -303,7 +303,7 @@ for i in range(1, 10):
     plt.close()
     
 
-# run(20)
+
 
 # run(40)
 
