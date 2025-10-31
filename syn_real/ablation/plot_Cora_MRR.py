@@ -47,19 +47,19 @@ raw_cora_mrr_data = [
     #  [4.29, 5.39, 5.21, 4.68, 5.16, 4.98, 3.71, 2.32, 2.48]),
     
     ("Proposed w.o. D1",
-     [0.81, 0.7, 0.63, 0.49, 0.4, 0.29, 0.19, 0.17, 0.1],
-     [85.53, 80.43, 65.46, 62.64,  60.1, 49.77, 41.64, 38.49, 34.89],
-     [14.99, 12.34, 4.98, 20.27, 10.21, 12.52, 3.52, 12.7, 5.32]),
+     [0.125, 0.25,  0.375, 0.5,    0.625, 0.75,  0.875, 1.0],
+     [80.43, 65.46, 62.64,  60.1,  49.77, 41.64, 38.49, 34.89],
+     [12.34, 4.98, 20.27, 10.21, 12.52, 3.52, 12.7, 5.32]),
     
     ("Proposed w.o D2",
-     [0.81, 0.7, 0.63, 0.49, 0.4, 0.29, 0.19, 0.17, 0.1],
-     [97.42, 58.13, 54.2, 49.86, 49.43, 45.12, 38.35, 35.64, 32.47],
-     [1.74, 11.5, 17.44, 7.44, 10.93, 5.11, 4.47, 4.88, 7.89]),
+    [0.125, 0.25,  0.375, 0.5,   0.625, 0.75, 0.875, 1.0],
+     [97.42, 58.13, 49.86, 49.43, 45.12, 38.35, 35.64, 32.47],
+     [1.74, 11.5, 7.44, 10.93, 5.11, 4.47, 4.88, 7.89]),
 
     ("Proposed",
-     [0.81, 0.7, 0.63, 0.49, 0.4, 0.29, 0.19, 0.17, 0.1],
-     [90.78, 84.41, 66.53, 64.51, 62.3, 57.83, 52.14, 47.36, 45.83],  
-     [7.34, 1.87, 14.99, 20.85, 10.83, 2.04, 13.77, 6.13, 3.3]),
+     [0.125, 0.25,  0.375, 0.5,   0.625, 0.75, 0.875, 1.0],
+     [90.78, 84.41, 66.53, 64.51, 57.83, 52.14, 47.36, 45.83],  
+     [7.34, 1.87, 14.99, 20.85,  2.04, 13.77, 6.13, 3.3]),
 ]
 
 
@@ -75,12 +75,12 @@ LEGENG_SIZE = 15
 
 colors = plt.cm.get_cmap('tab10', len(raw_cora_mrr_data))
 
-new_alpha = np.arange(0.1, 1.0, 0.1)
+# new_alpha = np.arange(0.1, 1.0, 0.1)
 interpolated_data = defaultdict(dict)
 
 for model, alpha, best_valid, variance in raw_cora_mrr_data:
 
-    interpolated_data[model]["alpha"] =  new_alpha
+    interpolated_data[model]["alpha"] =  alpha
     interpolated_data[model]["best_valid"] = best_valid
     interpolated_data[model]["variance"] = variance
 
@@ -148,9 +148,17 @@ legend = ax.legend(
 )
 legend.get_frame().set_facecolor('white')
 new_alpha = np.arange(0.1, 1.0, 0.2)
-ax.set_xlabel(r"$\alpha_{\mathcal{V}}$", fontsize=LABEL_SIZE)
+ax.set_xlabel(r"$EAR$", fontsize=LABEL_SIZE)
 ax.set_ylabel("MRR (/%)", fontsize=LABEL_SIZE)
-ax.set_xticks(new_alpha)
+xtick_positions = sorted(set(alpha))
+xtick_labels = [f"{x:.2f}" if x in [0.0, 0.25, 0.50, 0.75, 1.0] else "" for x in xtick_positions]
+
+ax.set_xlabel(r"$EAR$", fontsize=LABEL_SIZE)
+ax.set_ylabel("AUC (/%)", fontsize=LABEL_SIZE)
+ax.set_xticks(xtick_positions)
+ax.set_xticklabels(xtick_labels, fontsize=20)
+
+
 
 ax.set_yticks(np.arange(0, 101, 20))
 ax.set_ylim(31, 100) 

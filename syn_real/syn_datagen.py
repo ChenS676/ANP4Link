@@ -10,7 +10,6 @@ current_file = os.path.abspath(__file__)
 grandparent_dir = os.path.dirname(os.path.dirname(current_file))
 sys.path.insert(0, grandparent_dir)
 
-
 import numpy as np
 import torch
 from torch_geometric.datasets import Planetoid
@@ -116,7 +115,7 @@ def plot_orbit_dist(node_groups):
     plt.grid(axis='y', linestyle='--', alpha=0.7)
     plt.show()
     # plt.savefig(f"{name}_distribution_d{depth}.pdf")
-    plt.close()
+    # plt.close()
 
 
 
@@ -129,7 +128,7 @@ def plot_orbit(orbits):
     plt.grid(axis='y', linestyle='--', alpha=0.7)
     plt.show()
     # plt.savefig(f"{name}_distribution_d{depth}.pdf")
-    plt.close()
+    # plt.close()
     
 
 
@@ -185,37 +184,34 @@ def plot_combined_orbit_graph(G, pos, orbits, edge_class_counts, custom_labels=N
     # Adjust layout for better spacing
     plt.tight_layout()
     plt.show()
-    plt.savefig('example.pdf')
+    # plt.savefig('example.pdf')
 
     
-def analyze_automorphisms(data, G):
+def analyze_automorphisms(data, G, visualize=True):
 
     _, node_labels, orbits = run_wl_test_and_group_nodes(data.edge_index, num_nodes=data.num_nodes, num_iterations=100)
     orbits, num_orbit = get_graph_orbits(G)
     # print(f"Number of orbits: {num_orbit}")
 
-    custom_labels = {}
-    for i, ov in zip(G.nodes(), orbits):
-            custom_labels[i] = f"{ov}"
-
-    non_edge = count_automorphic_edges(G, orbits)
+    num_automorphic_edges, num_non_automorphic_edges, non_automorphic_edges, automorphic_edges, auto_nodes, unique_group_nodes = count_automorphic_edges(G, orbits)
     
-    # metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
-    
-    # plot_orbit_dist(orbits)
-    # plot_graph_with_orbits(G, 
-    #                        None, 
-    #                        orbits, 
-    #                        custom_labels=custom_labels, 
-    #                        figsize=(8, 6), cmap='tab20b')
-    # plot_orbit(orbits)
-    edge_class_counts, _ = hash_links_by_orbit(G, orbits)
-    # from syn_real.plotting import plot_unique_edge_class
-    # plot_unique_edge_class(edge_class_counts)
-
-    plot_combined_orbit_graph(G, None, orbits, edge_class_counts, custom_labels=custom_labels)
-    return non_edge
-
+    if visualize:
+        # metrics, num_nodes, group_sizes = compute_automorphism_metrics(orbits, G.number_of_nodes())
+        
+        custom_labels = {}  
+        for i, ov in zip(G.nodes(), orbits):
+                custom_labels[i] = f"{ov}"
+        # plot_graph_with_orbits(G, 
+                                # None, 
+                                # orbits, 
+                                # custom_labels=custom_labels, 
+                                # figsize=(8, 6), cmap='tab20b')
+        # plot_orbit(orbits)
+        edge_class_counts, edge_role_size, max_freq, most_common_edge_classes = hash_links_by_orbit(G, orbits)
+        # from syn_real.plotting import plot_unique_edge_class
+        # plot_unique_edge_class(edge_class_counts)
+        plot_combined_orbit_graph(G, None, orbits, edge_class_counts, custom_labels=custom_labels)
+    return num_automorphic_edges, num_non_automorphic_edges, non_automorphic_edges, automorphic_edges, auto_nodes, unique_group_nodes
 # %%
 
 def add_isolated_node_for_node(data, node_idx, copy_feature=True):
@@ -259,8 +255,6 @@ def add_isolated_node_for_node(data, node_idx, copy_feature=True):
     return new_data
 
 # %%
-import torch
-from torch_geometric.data import Data
 
 def add_node_connected_to_node(data, node_idx, copy_feature=True, undirected=True):
     """

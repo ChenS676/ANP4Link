@@ -211,11 +211,20 @@ legend = ax.legend(
 )
 legend.get_frame().set_facecolor('white')
 
-ax.set_xlabel(r"$\alpha_{\mathcal{V}}$", fontsize=LABEL_SIZE)
+ax.set_xlabel(r"$EAR$", fontsize=LABEL_SIZE)
 ax.set_ylabel("MRR (/%)", fontsize=LABEL_SIZE)
-ax.set_xticks(new_alpha)
+
 ax.set_yticks(np.arange(0, 101, 20))
 ax.tick_params(axis='both', labelsize=TICK_SIZE)
+
+xtick_positions = sorted(set(alpha))
+xtick_labels = [f"{x:.2f}" if x in [0.0, 0.25, 0.50, 0.75, 1.0] else "" for x in xtick_positions]
+
+ax.set_xlabel(r"$EAR$", fontsize=LABEL_SIZE)
+ax.set_ylabel("AUC (/%)", fontsize=LABEL_SIZE)
+ax.set_xticks(xtick_positions)
+ax.set_xticklabels(xtick_labels, fontsize=20)
+
 
 plt.tight_layout()
 plt.savefig('Ablation_Exp1_Citeseer_SYN_Real_MRR.pdf')

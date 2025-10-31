@@ -158,12 +158,14 @@ def hash_links_by_orbit(G: nx.Graph, orbits: list ):
                 edge_class_counts[key] += 1
                 edge_classes.append(key)    
     edge_role_size = sorted(list(edge_class_counts.values()), reverse=True)
-    return edge_class_counts, edge_role_size
+    max_freq = max(edge_class_counts.values())
+    most_common_edge_classes = [k for k, v in edge_class_counts.items() if v == max_freq]
 
+    # print("Max frequency:", max_freq)
+    # print("Most common edge classes:", most_common_edge_classes)
 
+    return edge_class_counts, edge_role_size, max_freq, most_common_edge_classes
 
-
-    
 
 import itertools
 def count_automorphic_edges(G, node_groups):
@@ -178,23 +180,43 @@ def count_automorphic_edges(G, node_groups):
     Returns:
         tuple: (intra_orbit_edges, inter_orbit_edges)
     """
-    group_counts = Counter(node_groups)
-    valid_nodes = {i for i, group in enumerate(node_groups) if group_counts[group] == 1}
 
-    # print(f"unique orbit node: {len(valid_nodes)}")
-    intra_orbit_edges = 0
-    inter_orbit_edges = 0
+    # Count the occurrences of each group
+    group_counts = Counter(node_groups)
+    unique_group_nodes = {i for i, group in enumerate(node_groups) if group_counts[group] == 1}
+    auto_nodes = {i for i, group in enumerate(node_groups) if group_counts[group] > 1}
+
+    non_automorphic_edges = []
+    automorphic_edges = []
+    intra_orbit_edge_count = 0
+    inter_orbit_edge_count = 0
+
+    print(f"Number of unique-orbit nodes: {len(unique_group_nodes)}")
+
+    # Iterate over all possible node pairs
     for u, v in itertools.product(G.nodes(), G.nodes()):
-        if u in valid_nodes and v in valid_nodes:
-            continue 
-        # print(f"u: {u}, v: {v}, group_u: {node_groups[u]}, group_v: {node_groups[v]}")
+        if u in unique_group_nodes and v in unique_group_nodes:
+            non_automorphic_edges.append((u, v))
+            continue
+
+        # Count and store automorphic edges
+        automorphic_edges.append((u, v))
         if node_groups[u] == node_groups[v]:
-            intra_orbit_edges += 1
+            intra_orbit_edge_count += 1
         else:
-            inter_orbit_edges += 1
-    print(f"Intra-orbit edges: {intra_orbit_edges}, Inter-orbit edges: {inter_orbit_edges}")
-    print(f"Non-distinguishable edges: {(intra_orbit_edges+inter_orbit_edges)}")
-    return intra_orbit_edges+inter_orbit_edges
+            inter_orbit_edge_count += 1
+    
+    # Final counts
+    num_automorphic_edges = intra_orbit_edge_count + inter_orbit_edge_count
+    num_non_automorphic_edges = len(non_automorphic_edges)
+
+    # print(f"Intra-orbit edges: {intra_orbit_edge_count}, Inter-orbit edges: {inter_orbit_edge_count}")
+    # print(f"Automorphic edges: {inter_orbit_edge_count/edge_counter:.2%} of total edges")
+    print(f"Distinguishable edges: {(num_non_automorphic_edges/G.number_of_nodes()**2)}")
+    print(f"non-automorphic edges: {num_non_automorphic_edges}")
+    print(f"automorphic edges: {len(automorphic_edges)}")
+    return num_automorphic_edges, num_non_automorphic_edges, non_automorphic_edges, automorphic_edges, auto_nodes, unique_group_nodes
+
 
 
 def compute_automorphism_metrics(orbits, num_nodes):

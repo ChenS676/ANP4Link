@@ -905,7 +905,7 @@ def main():
     
     disjoint_graph = create_disjoint_graph(original_data)
     disjoint_graph , metrics  = perturb_disjoint(disjoint_graph, args, 0, 0, 0)
-    # run_training_pipeline(disjoint_graph, metrics, 0, 0, 0, args)
+    run_training_pipeline(disjoint_graph, metrics, 0, 0, 0, args)
     
     if args.data_name == 'Cora':
         # Cora

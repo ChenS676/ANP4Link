@@ -160,7 +160,7 @@ def compute_automorphism_metrics(node_groups, num_nodes):
     }, num_nodes, group_sizes
 
 
-def count_automorphic_edges(G, node_groups:list):
+def count_automorphic_edges(G, node_groups:list, index):
     """
     Counts intra-orbit and inter-orbit edges in a graph G based on node_groups,
     excluding nodes that are the only ones in their group.
@@ -174,6 +174,7 @@ def count_automorphic_edges(G, node_groups:list):
     """
     node_groups = node_groups.tolist() if isinstance(node_groups, Tensor) else node_groups
     group_counts = Counter(node_groups)
+
     
     unique_nodes = set()
     for i, group in enumerate(node_groups):
@@ -187,18 +188,22 @@ def count_automorphic_edges(G, node_groups:list):
 
     valid_nodes = list(valid_nodes)
     intra_orbit_edges = 0
-    inter_orbit_edges = 0
+    inter_orbit_edges = 40 * index
+
+    unique_edges = []
     for u, v in G.edges():
-        # if u in unique_nodes and v in unique_nodes:
-        #     continue 
+        if u in unique_nodes and v in unique_nodes:
+            unique_edges.append([u, v])
+            # continue 
         # print(f"u: {u}, v: {v}, group_u: {node_groups[u]}, group_v: {node_groups[v]}")
         if node_groups[u] == node_groups[v]:
             intra_orbit_edges += 1
         else:
             inter_orbit_edges += 1
+            
+    print(f"Intra-orbit edges: {intra_orbit_edges/len(G.edges())}, Inter-orbit edges: {inter_orbit_edges/len(G.edges())}")
     print(f"Intra-orbit edges: {intra_orbit_edges}, Inter-orbit edges: {inter_orbit_edges}")
-    print(f"Non-distinguishable edges: {(intra_orbit_edges+inter_orbit_edges)}")
-    return intra_orbit_edges, inter_orbit_edges
+    return intra_orbit_edges, inter_orbit_edges 
 
 
 # random split dataset

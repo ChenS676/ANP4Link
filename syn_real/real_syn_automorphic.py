@@ -153,7 +153,7 @@ def attach_star_graph_with_features(G_orig: nx.Graph, data: Data, N: int, ig: in
     return G_combined, new_data, star_edges
 
 
-def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
+def perturb_disjoint(graph_data, inter_ratio, intra_ratio, total_edges):
     """
     Run the experiment with the given parameters.
     
@@ -174,14 +174,14 @@ def perturb_disjoint(graph_data, args, inter_ratio, intra_ratio, total_edges):
         updated_graph_data = graph_data
 
     G = to_networkx(updated_graph_data, to_undirected=True)
-    num_nodes = updated_graph_data.num_nodes
+    
+    ig = random.choice(list(G.nodes))
+    N = 40
+    G_data, updated_graph_data, star_edges = attach_star_graph_with_features(G, updated_graph_data, N, ig)
 
+    num_nodes = updated_graph_data.num_nodes
     node_groups, node_labels, new_labels = run_wl_test_and_group_nodes(updated_graph_data.edge_index, num_nodes=num_nodes, num_iterations=30)
     intra_orbit_edges, inter_orbit_edges = count_automorphic_edges(G, node_labels)
-
-    ig = random.choice(list(G.nodes))
-    N = 20
-    G_data, updated_graph_data, star_edges = attach_star_graph_with_features(G, updated_graph_data, N, ig)
     metrics_after, num_nodes, group_sizes = compute_automorphism_metrics(node_groups, num_nodes)
     df = pd.DataFrame([metrics_after])
     print(df)
@@ -724,10 +724,10 @@ def main():
     csv_path = f'plots/{args.data_name}/_Node_Merging.csv'
     file_exists = os.path.isfile(csv_path)
     original_data = load_real_world_graph(args.data_name)
-    perturb_disjoint(original_data, args, 0, 0, 0)
+    perturb_disjoint(original_data, 0, 0, 0)
     
     disjoint_graph = create_disjoint_graph(original_data)
-    disjoint_graph, metrics, intra_orbit_edges, inter_orbit_edges = perturb_disjoint(disjoint_graph, args, 0, 0, 0)
+    disjoint_graph, metrics, intra_orbit_edges, inter_orbit_edges = perturb_disjoint(disjoint_graph, 0, 0, 0)
     run_training_pipeline(disjoint_graph, intra_orbit_edges+ inter_orbit_edges, 0, 0, 0, args)
     
     if args.data_name == 'Cora':
@@ -755,7 +755,7 @@ def main():
         for intra in intra_ratios:
             for edge_factor in total_edges_list:
                 total_edges = int(edge_factor * multi_factor)
-                data, metrics, intra_orbit_edges, inter_orbit_edges = perturb_disjoint(disjoint_graph, args, inter, intra, total_edges)
+                data, metrics, intra_orbit_edges, inter_orbit_edges = perturb_disjoint(disjoint_graph, inter, intra, total_edges)
                 G = to_networkx(data, to_undirected=True)
                 # analyze_automorphisms(data, G)
                 run_training_pipeline(data, intra_orbit_edges+inter_orbit_edges, inter, intra, total_edges, args)
