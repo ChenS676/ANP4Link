@@ -21,7 +21,7 @@ import logging
 from yacs.config import CfgNode
 import copy 
 from sklearn.feature_extraction.text import TfidfVectorizer
-from transformers import AutoTokenizer, AutoModel
+# from transformers import AutoTokenizer, AutoModel
 import torch.nn.functional as F
 from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
@@ -29,8 +29,8 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from graphgps.finetuning import get_final_pretrained_ckpt
 from sklearn.feature_extraction.text import TfidfVectorizer
-import nltk
-from nltk.tokenize import word_tokenize
+# import nltk
+# from nltk.tokenize import word_tokenize
 import re
 from pathlib import Path 
 import random
