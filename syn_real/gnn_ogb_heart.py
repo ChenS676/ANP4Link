@@ -14,9 +14,30 @@ from torch.utils.data import DataLoader
 from torch_sparse import SparseTensor
 from torch_geometric.utils import to_networkx, to_undirected
 import torch_geometric.transforms as T
-from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
+import torch
+from torch.serialization import add_safe_globals
+
+# Register the needed PyG globals (works across PyG 2.x)
+# Try to import the exact class; fall back cleanly if not present.
+try:
+    from torch_geometric.data.data import DataEdgeAttr
+    add_safe_globals([DataEdgeAttr])
+except Exception:
+    pass
+
+# (Optional) also allow-list Data, which sometimes appears in old caches
+try:
+    from torch_geometric.data import Data
+    add_safe_globals([Data])
+except Exception:
+    pass
+
+# Now import OGB and load the dataset
+from ogb.linkproppred import PygLinkPropPredDataset
+
+
 import os
-from graphgps.utility.utils import mvari_str2csv, random_sampling_ogb
+
 import torch
 from torch_geometric.data import Data
 import argparse
@@ -35,8 +56,10 @@ from torch_geometric.utils import (to_undirected,
 # OBGL-PPA,DDI, CITATION2, VESSEL, COLLAB
 # basic idea is to replace diffusion operator in mpnn and say whether it works better in ogbl-collab and citation2
 # and then expand to synthetic graph
+from graphgps.utility.utils import mvari_str2csv, random_sampling_ogb
 dir_path = get_root_dir()
 log_print = get_logger('testrun', 'log', get_config_dir())
+
 
 def get_metric_score(evaluator_hit, evaluator_mrr, pos_train_pred, pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
 

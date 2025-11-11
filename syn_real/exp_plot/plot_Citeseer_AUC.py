@@ -187,7 +187,6 @@ fontsize = 22
 
 
 # Formatting the plot
-
 legend = ax.legend(
     fontsize=LEGEND_SIZE,
     loc="lower left",             # ✅ 改为左下角
