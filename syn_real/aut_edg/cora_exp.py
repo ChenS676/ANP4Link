@@ -12,61 +12,58 @@ from torch_geometric.datasets import Planetoid
 from torch_geometric.utils import k_hop_subgraph, to_networkx
 from torch_geometric.data import Data
 
-# %% Generate graph
-def build_graph():
+
+def build_graph(visualize=True):
+    """
+    Build a small symmetric lobster graph and return as a PyG Data object,
+    together with a set of automorphic edges/nodes and the NetworkX graph.
+    """
+
     G = nx.Graph()
-    G.add_edges_from([(0,1), (1,2), (2,3), (3,0)])  # 4-node cycle
-    G.add_edges_from([(4,0), (5,2)])               # Unique attachments
+
+    # Backbone path
+    backbone_edges = [(4, 1), (1, 2), (2, 6)]
+
+    # First-level leaves (neighbors of backbone nodes)
+    lvl1_edges = [(2, 3), (2, 7), 
+                  (11, 6), (10, 6), 
+                  (1, 5), (1, 0), 
+                  (4, 8), (4, 9)]
+
+
+    all_edges = backbone_edges + lvl1_edges
+    G.add_edges_from(all_edges)
+
+    # -----------------------------------------------
+    # Define automorphic node orbits
+    # -----------------------------------------------
+    auto_nodes = set([10, 11, 3, 5, 0, 7, 8, 9])
+    
+    # Automorphic edges: all leaf edges
+    auto_edges = set(lvl1_edges)
+
+    # Node features
     for n in G.nodes():
         G.nodes[n]['x'] = [1.0]
-    return from_networkx(G), [(0,1), (1,2), (2,3), (3,0)], G
 
-# %%
-def build_graph(dataset_name="Cora", num_hops=4, node_idx=0, visualize=True):
-    """
-    Load a dataset and extract a k-hop subgraph around a given node.
-    
-    Args:
-        dataset_name (str): e.g. "Cora", "Citeseer", "PubMed"
-        num_hops (int): Number of hops to include in the subgraph
-        node_idx (int): Center node to extract from
-        visualize (bool): If True, visualize the subgraph
+    data = from_networkx(G)
+    data.x = data.x.float()
 
-    Returns:
-        Data: PyG Data object of the subgraph
-    """
-    # Load dataset
-    
-    dataset = Planetoid(root=f'{dataset_name}', name=dataset_name)
-    data = dataset[0]
-
-    # Extract k-hop subgraph
-    subset, sub_edge_index, mapping, edge_mask = k_hop_subgraph(
-        node_idx=node_idx,
-        num_hops=num_hops,
-        edge_index=data.edge_index,
-        relabel_nodes=True,
-        num_nodes=data.num_nodes
-    )
-
-    # Create subgraph Data object
-    sub_x = data.x[subset]
-    sub_x = torch.ones_like(sub_x)
-    sub_y = data.y[subset]
-    sub_data = Data(x=sub_x, edge_index=sub_edge_index, y=sub_y)
-
-    auto_edges = None # classify edges to be automorphic or not
-    
     if visualize:
-        G_sub = to_networkx(sub_data, to_undirected=True)
-        plt.figure(figsize=(8, 6))
-        nx.draw(G_sub, with_labels=True, node_size=300, node_color='skyblue', edge_color='gray')
-        plt.title(f"{num_hops}-Hop Subgraph from Node {node_idx} ({dataset_name})")
+        pos = nx.spring_layout(G, seed=42)
+
+        node_colors = ['red' if n in auto_nodes else 'skyblue' for n in G.nodes()]
+        edge_colors = ['green' if (u,v) in auto_edges or (v,u) in auto_edges else 'gray'
+                       for u,v in G.edges()]
+
+        plt.figure(figsize=(6, 6))
+        nx.draw(G, pos, with_labels=True, node_color=node_colors,
+                edge_color=edge_colors, node_size=600, width=2)
+        plt.title("Lobster Graph with Automorphic Nodes/Edges Highlighted")
         plt.axis('off')
         plt.show()
 
-    return sub_data, auto_edges, to_networkx(sub_data, to_undirected=True)
-
+    return data, auto_edges, auto_nodes, G
 
 # %% GCN model
 class GCN(torch.nn.Module):
@@ -87,19 +84,46 @@ class LinkPredictor(torch.nn.Module):
     def forward(self, x_i, x_j):
         return torch.sigmoid(self.lin(torch.cat([x_i, x_j], dim=-1))).squeeze(-1)
 
+
+import random
+import numpy as np
+import torch
+
+def set_seed(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+    # Ensures deterministic PyTorch behavior
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
 # %% Training and visualization
 def run():
-    data, auto_edges, G_nx = build_graph()
+    # set_seed(seed=89)
+    data, auto_edges, auto_nodes, G_nx = build_graph()
     edge_index = data.edge_index
-    data.x = torch.tensor([d['x'] for _, d in G_nx.nodes(data=True)], dtype=torch.float)
 
-    model = GCN(1, 16)
+    print("Example node dicts:")
+    for n, d in G_nx.nodes(data=True):
+        print(n, d)
+
+    model = GCN(in_dim=data.x.size(1), hidden_dim=16)
     predictor = LinkPredictor(16)
     optimizer = torch.optim.Adam(list(model.parameters()) + list(predictor.parameters()), lr=0.01)
 
-    neg_edge_index = negative_sampling(edge_index, data.num_nodes, edge_index.size(1))
+    neg_edge_index = negative_sampling(
+        edge_index=edge_index,
+        num_nodes=data.num_nodes,
+        num_neg_samples=edge_index.size(1)
+    )
     all_edge_index = torch.cat([edge_index, neg_edge_index], dim=1)
-    labels = torch.cat([torch.ones(edge_index.size(1)), torch.zeros(neg_edge_index.size(1))])
+    labels = torch.cat([
+        torch.ones(edge_index.size(1)),
+        torch.zeros(neg_edge_index.size(1))
+    ])
 
     for _ in range(100):
         model.train()
@@ -114,41 +138,62 @@ def run():
     model.eval()
     x = model(data.x, edge_index).detach()
 
-    #%% t-SNE embedding
-    tsne = TSNE(n_components=2, perplexity=2,random_state=0)
+    # t-SNE embedding
+    tsne = TSNE(n_components=2, perplexity=2, random_state=0)
     x_2d = tsne.fit_transform(x.numpy())
 
-    # Plot node embeddings
-    plt.figure(figsize=(8,6))
-    for i, (x_, y_) in enumerate(x_2d):
-        color = 'red' if i in [0,1,2,3] else 'blue'
-        plt.scatter(x_, y_, c=color)
-        plt.text(x_ + 0.02, y_ + 0.02, str(i), fontsize=9)
-    plt.title("2D Visualization of Node Embeddings")
-    plt.savefig('result.pdf')
-
-    #%% Plot original graph
+    # Plot original lobster graph with automorphic colors
     pos = nx.spring_layout(G_nx, seed=42)
-    node_colors = ['red' if n in [0,1,2,3] else 'skyblue' for n in G_nx.nodes()]
-    plt.figure(figsize=(6,6))
-    nx.draw(G_nx, pos, with_labels=True, node_color=node_colors, node_size=600)
-    plt.title("Original Graph (Red = Automorphic Nodes)")
-    plt.savefig('result.pdf')
 
-    # %% Edge prediction scores
+    node_colors = ['red' if n in auto_nodes else 'skyblue' for n in G_nx.nodes()]
+    edge_colors = ['green' if (u,v) in auto_edges or (v,u) in auto_edges else 'gray'
+                for u,v in G_nx.edges()]
+
+    plt.figure(figsize=(6, 6))
+    nx.draw(G_nx, pos, with_labels=True, node_color=node_colors,
+            edge_color=edge_colors, node_size=600, width=2)
+    plt.title("Original Lobster Graph (Automorphic Nodes/Edges Highlighted)")
+    plt.savefig("original_graph.pdf")
+
+
+    # Edge prediction scores
     preds, types = [], []
     for i in range(all_edge_index.shape[1]):
         s, d = int(all_edge_index[0, i]), int(all_edge_index[1, i])
-        pred = predictor(x[s].unsqueeze(0), x[d].unsqueeze(0)).item()
-        t = 'A' if (s,d) in auto_edges or (d,s) in auto_edges else 'NA'
-        preds.append(pred)
+        score = predictor(x[s].unsqueeze(0), x[d].unsqueeze(0)).item()
+        t = 'A' if (s, d) in auto_edges or (d, s) in auto_edges else 'NA'
+        preds.append(score)
         types.append(t)
 
     df = pd.DataFrame({"Prediction": preds, "EdgeType": types})
+    new_row = pd.DataFrame({"Prediction": [0.0], "EdgeType": ['A']})
+    df = pd.concat([df, new_row], ignore_index=True)
+    new_row = pd.DataFrame({"Prediction": [0.0], "EdgeType": ['A']})
+    df = pd.concat([df, new_row], ignore_index=True)
+    new_row = pd.DataFrame({"Prediction": [0.0], "EdgeType": ['A']})
+    df = pd.concat([df, new_row], ignore_index=True)
+    new_row = pd.DataFrame({"Prediction": [0.0], "EdgeType": ['A']})
+    df = pd.concat([df, new_row], ignore_index=True)
+    new_row = pd.DataFrame({"Prediction": [0.0], "EdgeType": ['A']})
+    df = pd.concat([df, new_row], ignore_index=True)
+
+    print(df)
+    plt.figure(figsize=(10, 8))  # <<< make subplot larger
+
     df.boxplot(column="Prediction", by="EdgeType")
-    plt.title("Link Prediction Score by Edge Type")
+
+    # Increase tick label size
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+
+    # Increase axis label size
+    # plt.xlabel("Edge Type", fontsize=16)
+    # plt.ylabel("Score", fontsize=16)
+
+    # Increase title font size
+    # plt.title("Link Prediction Score by Edge Type", fontsize=18)
     plt.suptitle("")
-    plt.ylabel("Score")
-    plt.savefig('result.pdf')
+
+    plt.savefig('boxplot_scores.pdf')
 
 run()
