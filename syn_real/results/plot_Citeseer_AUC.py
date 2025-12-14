@@ -42,12 +42,6 @@ raw_citeseer_auc_data = [
      [99.42, 98.94, 99.17, 98.28, 98.31, 97.89, 97.81, 96.56, 95.87, 93.11, 91.93],
      [0.14, 0.32, 0.14, 0.71, 0.74, 1.07, 0.41, 1.26, 1.41, 4.54, 2.09]),
 
-    # ar_scores = [
-    #     0.9358280733393447, 0.8755635707844905, 0.8128944995491434,
-    #     0.7753231139164413, 0.6549443943492635, 0.5766456266907124,
-    #     0.47971145175834085, 0.3826269912834385, 0.2777276825969342,
-    #     0.18079350766456267, 0.09888788698527201
-    # ]
      #bs1024_lr0.02_testbs2048
     ("BUDDY",
      [0.9, 0.82, 0.72, 0.62, 0.52, 0.43, 0.35, 0.23, 0.19, 0.12, 0.06],
@@ -158,14 +152,7 @@ for idx, (model, values) in enumerate(interpolated_data.items()):
         capthick=2
     )
 fontsize = 22
-# Formatting the plot
-# ax.set_xlabel(r"$\alpha_{\mathcal{E}}$", fontsize=LABEL_SIZE)
-# ax.set_ylabel("AUC (/%)", fontsize=LABEL_SIZE)
-# ax.set_xticks(new_alpha)
-# ax.set_yticks(np.arange(99.5, 100, 0.25))
-# ax.tick_params(axis='both', labelsize=TICK_SIZE)
-# ax.legend(fontsize=LEGENG_SIZE, loc="lower left")
-# plt.tight_layout()
+
 # Formatting the plot
 legend = ax.legend(
     fontsize=LEGEND_SIZE,
@@ -176,6 +163,7 @@ legend = ax.legend(
     framealpha=0.5,
     fancybox=True
 )
+
 legend.get_frame().set_facecolor('white')
 ax.set_xlabel(r"$\alpha_{\mathcal{V}}$", fontsize=LABEL_SIZE)
 ax.set_ylabel("AUC (/%)", fontsize=LABEL_SIZE)

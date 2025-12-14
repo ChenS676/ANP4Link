@@ -253,7 +253,7 @@ def plot_histogram_group_size_log_scale(group_sizes, metrics_before, args, save_
 
 def parse_args():
     parser = argparse.ArgumentParser(description='homo')
-    parser.add_argument('--data_name', type=str, default="Cora")
+    parser.add_argument('--data_name', type=str, default="Citeseer")
     parser.add_argument('--neg_mode', type=str, default='equal')
     parser.add_argument('--gnn_model', type=str, default='GCN')
     parser.add_argument('--score_model', type=str, default='mlp_score')

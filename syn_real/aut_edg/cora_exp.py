@@ -178,9 +178,9 @@ def run():
     df = pd.concat([df, new_row], ignore_index=True)
 
     print(df)
-    plt.figure(figsize=(10, 8))  # <<< make subplot larger
+    plt.figure(figsize=(6, 6))  # <<< make subplot larger
 
-    df.boxplot(column="Prediction", by="EdgeType")
+    df.boxplot(column="Prediction", by="EdgeType", figsize=(6,6))
 
     # Increase tick label size
     plt.xticks(fontsize=18)
@@ -193,7 +193,6 @@ def run():
     # Increase title font size
     # plt.title("Link Prediction Score by Edge Type", fontsize=18)
     plt.suptitle("")
-
     plt.savefig('boxplot_scores.pdf')
 
 run()

@@ -154,7 +154,7 @@ def load_real_world_graph(dataset_name="Cora"):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='homo')
-    parser.add_argument('--data_name', type=str, default="Cora")
+    parser.add_argument('--data_name', type=str, default="Citeseer")
     parser.add_argument('--neg_mode', type=str, default='equal')
     parser.add_argument('--gnn_model', type=str, default='GCN')
     parser.add_argument('--score_model', type=str, default='mlp_score')
@@ -195,8 +195,8 @@ def parse_args():
     parser.add_argument('--intra_ratio', type=float, default=0.5)
     parser.add_argument('--total_edges', type=int, default=1000)
     # ----- RANDOM EDGE DROP (NEW) -----
-    parser.add_argument('--use_randrop', type=int, default=0, help='0=off, 1=on')
-    parser.add_argument('--randrop_percent', type=float, default=1.0, help='preserve this fraction of train edges (0,1]')
+    parser.add_argument('--use_randrop', type=int, default=0.1, help='0=off, 1=on')
+    parser.add_argument('--randrop_percent', type=float, default=0.1, help='preserve this fraction of train edges (0,1]')
     parser.add_argument('--randrop_when', type=str, default='once', choices=['once','each_epoch','each_eval'],
                         help='apply once, every epoch, or at every evaluation step')
     args = parser.parse_args()
