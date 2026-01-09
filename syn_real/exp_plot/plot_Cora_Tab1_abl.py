@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import interp1d
 from collections import defaultdict
-from plot_Citeseer_AUC import model_colors 
+from syn_real.exp_plot.plot_Citeseer_AUC_abl import model_colors 
 
 raw_cora_auc_data = [
     ("GCN",

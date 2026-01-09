@@ -23,15 +23,12 @@ import numpy as np
 from scipy.interpolate import interp1d
 from collections import defaultdict
 
-TITLE_SIZE = 26
-LABEL_SIZE = 35
-TICK_SIZE = 35
-LEGEND_SIZE = 26
-LEGEND_TITLE_SIZE = 24
-ANNOTATION_SIZE = 24
+LABEL_SIZE = 28
+TICK_SIZE = 28
+LEGEND_SIZE = 24
 FIGSIZE = (10, 8)
 DPI = 300
-LEGENG_SIZE = 15
+
 
 # Define sample data (replace this with your actual dataset)
 raw_citeseer_auc_data = [
@@ -183,11 +180,10 @@ for idx, (model, values) in enumerate(interpolated_data.items()):
         elinewidth=2,
         capthick=2
     )
-fontsize = 22
+
 
 
 # Formatting the plot
-
 legend = ax.legend(
     fontsize=LEGEND_SIZE,
     loc="lower left",             # ✅ 改为左下角
@@ -197,8 +193,6 @@ legend = ax.legend(
     framealpha=0.5,
     fancybox=True
 )
-
-
 legend.get_frame().set_facecolor('white')
 ax.set_xlabel(r"$EAR$", fontsize=LABEL_SIZE)
 ax.set_ylabel("AUC (/%)", fontsize=LABEL_SIZE)
@@ -213,5 +207,4 @@ ax.set_ylim(ymin, ymax)
 ax.tick_params(axis='both', labelsize=TICK_SIZE)
 # ax.legend(fontsize=LEGENG_SIZE, loc="lower left")
 plt.tight_layout()
-
-plt.savefig('ablation_Exp1_Citeseer_SYN_AUC_Real.pdf')
+plt.savefig('ablation_Exp1_Citeseer_SYN_AUC_Real_updated.pdf')

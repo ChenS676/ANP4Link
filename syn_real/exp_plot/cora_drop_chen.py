@@ -3,14 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # ---- Plot style constants ----
-TITLE_SIZE = 26
-LABEL_SIZE = 35
-TICK_SIZE = 35
-LEGEND_SIZE = 26
-LEGEND_TITLE_SIZE = 24
-ANNOTATION_SIZE = 24
+LABEL_SIZE = 28
+TICK_SIZE = 28
+LEGEND_SIZE = 24
 FIGSIZE = (10, 8)
 DPI = 300
+
 
 # ===============================
 # 1) Cora – GCN (no drop)
@@ -205,5 +203,5 @@ def plot_metric_all_models(models, metric_key, savepath=None):
 
 # ---- Generate all four figures ----
 base = "/hkfs/work/workspace/scratch/cc7738-automorphism/ANP4Link/syn_real/exp_plot"
-plot_metric_all_models(models, "mrr", savepath=f"{base}/chen_cora_all_models_mrr2.pdf")
-plot_metric_all_models(models, "auc", savepath=f"{base}/chen_cora_all_models_auc2.pdf")
+plot_metric_all_models(models, "mrr", savepath=f"{base}/cora_all_models_mrr2.pdf")
+plot_metric_all_models(models, "auc", savepath=f"{base}/cora_all_models_auc2.pdf")

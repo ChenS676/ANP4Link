@@ -111,15 +111,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from cora_drop_plot_huang import _sorted_series, metric_keys
 from cora_drop_chen import model_colors
-TITLE_SIZE = 26
-LABEL_SIZE = 35
-TICK_SIZE = 35
-LEGEND_SIZE = 26
-LEGEND_TITLE_SIZE = 24
-ANNOTATION_SIZE = 24
+
+LABEL_SIZE = 28
+TICK_SIZE = 28
+LEGEND_SIZE = 24
 FIGSIZE = (10, 8)
 DPI = 300
-LEGENG_SIZE = 15
 
 
 citeseer_no_drop = {

@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import interp1d
 from collections import defaultdict
-from plot_Citeseer_AUC import model_colors 
+from syn_real.exp_plot.plot_Citeseer_AUC_abl import model_colors 
 
 raw_cora_auc_data = [
     # ("GCN",
@@ -81,12 +81,9 @@ raw_cora_auc_data = [
      [0.03, 0.03, 0.07, 0.0, 0.05, 0.04, 0.03, 0.07, 0.08]),
 ]
 
-TITLE_SIZE = 26
-LABEL_SIZE = 35
-TICK_SIZE = 35
-LEGEND_SIZE = 26
-LEGEND_TITLE_SIZE = 24
-ANNOTATION_SIZE = 24
+LABEL_SIZE = 28
+TICK_SIZE = 28
+LEGEND_SIZE = 24
 FIGSIZE = (10, 8)
 DPI = 300
 
@@ -159,7 +156,7 @@ ax.set_yticklabels([f"{tick:.2f}" for tick in yticks])  # 保留两位小数
 
 ax.set_ylim(ymin, 100.02) 
 ax.tick_params(axis='both', labelsize=TICK_SIZE)
-# ax.legend(fontsize=LEGENG_SIZE, loc="lower left")
 plt.tight_layout()
 
-plt.savefig('ablation_Exp1_Cora_SYN_AUC_Real.pdf')
+plt.savefig('ablation_Exp1_Cora_SYN_AUC_Real_updated.pdf')
+print("Plot saved as 'ablation_Exp1_Cora_SYN_AUC_Real.pdf'")
